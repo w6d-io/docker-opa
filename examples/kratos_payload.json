@@ -1,0 +1,58 @@
+{
+  "id": "xxxxxxx-xxxxxxx-xxxxxx-xxxxxxx-xxxxxxxxxxx",
+  "credentials": {
+    "password": {
+      "type": "password",
+      "identifiers": [
+        "example@wildcard.io"
+      ],
+      "version": 0,
+      "created_at": "2022-05-12T13:49:17.622919-04:00",
+      "updated_at": "2022-05-12T13:49:17.622919-04:00"
+    }
+  },
+  "schema_id": "person",
+  "schema_url": "http://127.0.0.1:4433/schemas/cGVyc29u",
+  "state": "active",
+  "state_changed_at": "2022-05-12T13:49:17.619243-04:00",
+  "traits": {
+    "email": "example@wildcard.io",
+    "name": {
+      "first": "example",
+      "last": "example"
+    },
+    "roles": {
+      "organizations": [],
+      "private_projects": [
+        {
+          "key": 222,
+          "value": "admin"
+        }
+      ],
+      "scopes": [],
+      "affiliate_projects": []
+    }
+  },
+  "verifiable_addresses": [
+    {
+      "id": "195ad0ac-4c76-431b-9968-9d485dc756cb",
+      "value": "example@wildcard.io",
+      "verified": false,
+      "via": "email",
+      "status": "pending",
+      "created_at": "2022-05-12T13:49:17.622302-04:00",
+      "updated_at": "2022-05-12T13:49:17.622302-04:00"
+    }
+  ],
+  "recovery_addresses": [
+    {
+      "id": "bee609ba-8b51-420a-99a7-8e572b429df8",
+      "value": "example@wildcard.io",
+      "via": "email",
+      "created_at": "2022-05-12T13:49:17.622611-04:00",
+      "updated_at": "2022-05-12T13:49:17.622611-04:00"
+    }
+  ],
+  "created_at": "2022-05-12T13:49:17.621541-04:00",
+  "updated_at": "2022-05-12T13:49:17.621541-04:00"
+}

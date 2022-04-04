@@ -1,0 +1,10 @@
+{
+  "kratos": "djhskdbdhbwhfbkhkwkckhfdbkbkbfkb",
+
+  "eval": "private_projects",
+  "resource": 222,
+
+  "uri": "app/project",
+  "method": "get",
+  "role": ["read","admin"]
+}

@@ -1,0 +1,42 @@
+{
+  "$id": "https://schemas.ory.sh/presets/kratos/quickstart/email-password/scope.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Scope",
+  "type": "object",
+  "properties": {
+    "traits": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "title": "Id of your scope",
+          "minLength": 3,
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              }
+            }
+          }
+        },
+        "organization": {
+          "type": "integer",
+          "title": "Id of the organization to scope",
+          "minLength": 3
+        },
+        "name": {
+          "type": "string",
+          "title": "Name of your scope",
+          "minLength": 3
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "name",
+        "projects"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

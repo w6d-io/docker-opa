@@ -1,0 +1,13 @@
+{
+  "roles": {
+    "affiliate_projects": [],
+    "organizations": [],
+    "private_projects": [
+      {
+        "key": 222,
+        "value": "read"
+      }
+    ],
+    "scopes": []
+  }
+}

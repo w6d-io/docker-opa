@@ -1,0 +1,21 @@
+{
+  "schema_id": "person",
+  "traits": {
+    "email": "jack.crosnier1@wildcard.io",
+    "name": {
+      "first": "jack",
+      "last": "crosnier"
+    },
+    "roles": {
+      "organizations": [],
+      "private_projects": [
+        {
+          "key": 222,
+          "value": "admin"
+        }
+      ],
+      "scopes": [],
+      "affiliate_projects": []
+    }
+  }
+}

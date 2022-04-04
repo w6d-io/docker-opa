@@ -1,0 +1,11 @@
+kafka:
+  service: 'kafka-0.kafka-headless.kafka.svc.cluster.local:9092'
+  topics:
+    error: 'opa-error'
+salt: "examples"
+salt_length: 40
+http:
+  kratos: 'http://localhost:4434/admin/identities/'
+  project: 'http://project:8080/health/ready'
+grpc:
+  project: 'http://project:8080/'

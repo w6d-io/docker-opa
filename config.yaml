@@ -1,0 +1,22 @@
+kafka:
+  service: 'kafka-0.kafka-headless.kafka.svc.cluster.local:9092'
+  topics:
+    producer: 'push_events'
+    error: 'webhook-error'
+
+salt: jlHQJMtz70WrDrsmrPEcnFeoCYEa3oIi
+salt_length: 16
+
+http:
+  kratos: 'http://kratos.kratos:4434/admin/identities/'
+grpc:
+  project: 'http://project:8081/'
+
+env:
+  - name: RUST_LOG
+    value: 'debug'
+  - name: TASK_LIMIT
+    value: '50'
+
+redis:
+  enabled: false

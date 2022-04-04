@@ -1,0 +1,9 @@
+{
+  "traits": {
+    "email": "jack.crosnier1@wildcard.io",
+    "name": {
+      "first": "jack",
+      "last": "crosnier"
+    }
+}
+}

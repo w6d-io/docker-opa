@@ -1,0 +1,9 @@
+{
+  "schema_id": "scope",
+  "traits": {
+    "id": 54321233,
+    "organization": 7891082828,
+    "name": "marketing_2",
+    "projects": [0,111,288822,33003]
+  }
+}
