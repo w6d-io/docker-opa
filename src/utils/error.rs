@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use serde::Serialize;
 
 use crate::utils::kafka::send_to_kafka;

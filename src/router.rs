@@ -1,23 +1,15 @@
 use anyhow::Result;
-use opa_wasm::Policy;
-use prometheus::proto;
-use rocket::response::status;
-use rocket::response::status::Accepted;
-use rocket::State;
+
 use tonic::{Request, Response, Status};
 
 use crate::{
-    open_policy_agency::{
-        InputRequest,
-        ResultReply,
-        opaproto_server::{OpaprotoServer, Opaproto}
-    },
     controller::post::post_eval,
     middleware::{
         ping_guard::Ready, resthttp1_guard::from_data_grpc, resthttp1_guard::PayloadGuard,
     },
+    open_policy_agency::{opaproto_server::Opaproto, InputRequest, ResultReply},
     types::Result as BooleanResult,
-    utils::{error::send_error, rocket_anyhow, telemetry::gather_telemetry},
+    utils::{rocket_anyhow, telemetry::gather_telemetry},
 };
 
 //##
@@ -72,11 +64,3 @@ pub async fn health_alive() {}
 ///route for prometheus telemetry
 #[get("/health/ready")]
 pub async fn health_ready(_ready: Ready) {}
-
-#[cfg(test)]
-mod test_router {
-    use rocket::http::{Header, Status};
-    use rocket::local::blocking::Client;
-
-    use crate::{setup_rocket, utils::secret::secret_test_utils::generate_hash};
-}

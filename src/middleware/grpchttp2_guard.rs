@@ -1,23 +1,14 @@
-use hyper::body::aggregate;
-use hyper::body::{to_bytes, Buf, HttpBody};
 use hyper::Body;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::net::SocketAddr;
-use std::time::{Instant, SystemTime};
-use std::{
-    task::{Context, Poll},
-    time::Duration,
-};
-use tonic::{
-    body::empty_body, body::BoxBody, transport::Server, IntoRequest, Request, Response, Status,
-};
-use tower::{Layer, Service, ServiceExt};
+use std::task::{Context, Poll};
+use std::time::Instant;
+use tonic::{body::BoxBody, Request, Status};
+use tower::{Layer, Service};
 use uuid::Uuid;
 
 // An interceptor  function.
 pub(crate) fn intercept(req: Request<()>) -> Result<Request<()>, Status> {
-    println!("interceptor -------- 000000 : {:?}", req);
-
     let addr = req.remote_addr();
     let mut req = req;
 
@@ -27,12 +18,6 @@ pub(crate) fn intercept(req: Request<()>) -> Result<Request<()>, Status> {
         ip: addr,
         local_cache: Some(Instant::now()),
     });
-
-    let extension = req.extensions_mut().get::<MyExtension>().unwrap();
-
-    let metadata = &extension.correlation_id;
-
-    println!("--------  interceptor 111111 -------- : {:?}", metadata);
 
     // corelation
     Ok(req)
@@ -97,18 +82,14 @@ where
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
         Box::pin(async move {
-            /*            println!("HELLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLA  ------ {:?}", req.body_mut());
-
-
+            /*
             let response= api_post_response(req).await;
-
-            println!("interceptor -------- BODY 222222222222222222222222222222 ---------- : {:?}",response);
 
             Ok(hyper::Response::builder()
                 .status("200")
                 .body(BoxBody::from(empty_body()))
-                .unwrap())*/
-
+                .unwrap())
+            */
 
             let extension = match req.extensions_mut().remove() {
                 Some(extension) => extension,
@@ -148,16 +129,6 @@ where
             if let Some(status) = response.headers().get("grpc-status") {
                 data.status = status.to_str().unwrap();
             }
-
-            println!(
-                " --------- tower 4444444444444444 --------  : {:?}",
-                response
-            );
-
-            println!(
-                " --------- tower 5555555555555555555 --------  : {:?} ----- ",
-                data.status
-            );
 
             info!("{}", log_formater(data));
 

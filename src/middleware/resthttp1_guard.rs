@@ -1,38 +1,13 @@
-use anyhow::anyhow;
-use base64::{decode, encode};
-use curl::easy::Easy;
-use hmac::digest::typenum::private::Trim;
-use hyper::Body;
-use log::debug;
+use base64::decode;
 use rocket::{
     data::{self, Data, FromData, Outcome, ToByteUnit},
     http::Status,
-    request,
     request::Request,
     serde::json::serde_json,
 };
-use std::fmt::Display;
-use std::ops::Deref;
-use std::option::Option;
 use std::result;
-use std::str;
-use std::str::FromStr;
 use tonic::{Request as TonicRequest, Status as TonicStatus};
 
-use rdkafka::message::ToBytes;
-
-use serde::{Deserialize, Serialize};
-use serde_json::{Deserializer, Error, Serializer};
-
-use hyper::body;
-use hyper::body::aggregate;
-use std::mem::size_of_val;
-//use log::kv::ToValue;
-use prost::Message;
-use rocket::outcome::Outcome::Failure;
-//use log::kv::ToValue;
-use rslib::kafka;
-use serde_json::to_string;
 use thiserror::Error;
 
 #[allow(unused_imports)]
@@ -42,23 +17,16 @@ use crate::{
     types::Input,
     types::Opadata,
     utils::error::send_error,
-    utils::secret::{
-        get_secret, validate_github_payload_sha256, validate_gitlab_payload, SecretError,
-    },
 };
 
 #[derive(Debug, Error)]
 #[allow(clippy::enum_variant_names)]
 ///enum containing all error type for the payload validation
 pub enum PayloadValidationError {
-    #[error("a header is missing")]
-    ErrorMissingHeader,
     #[error("the body is missing")]
     ErrorMissingBody,
     #[error("a parameter is missing")]
     ErrorMissingQuery,
-    #[error("invalid hash")]
-    ErrorInvalidPayload(#[from] SecretError),
     #[error("failed to get the project id")]
     ErrorFailedToParseRepositoryID(#[from] anyhow::Error),
     #[error("failed to deserialize")]
@@ -105,7 +73,7 @@ pub async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, P
         Ok(resp) => resp,
         Err(e) => {
             error!("error while run request to kratos: {e}");
-            if let Err(e) = send_error("error", &e).await {
+            if let Err(_e) = send_error("error", &e).await {
                 warn!("Failed to send error to kafka");
             };
 
@@ -121,7 +89,7 @@ pub async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, P
         Ok(data) => data,
         Err(e) => {
             error!("User ID Kratos not exist. Not get text request body: {e}");
-            if let Err(e) = send_error("error", &e).await {
+            if let Err(_e) = send_error("error", &e).await {
                 warn!("Failed to send error to kafka");
             };
             return Outcome::Failure((
@@ -142,7 +110,7 @@ pub async fn payload_input_deserialize<'r>(header: String) -> data::Outcome<'r, 
         Ok(input) => input,
         Err(e) => {
             error!("error while deserializing the request input:{e}");
-            if let Err(e) = send_error("error", &e).await {
+            if let Err(_e) = send_error("error", &e).await {
                 warn!("Failed to send error to kafka");
             };
             return Outcome::Failure((
@@ -236,13 +204,12 @@ impl<'r> FromData<'r> for PayloadGuard {
         };
         match header {
             None => {
-                println!("{}", "Header is empty")
+                info!("{}", "Header is empty")
             }
             Some(header) if !header.is_empty() => {
                 let header_str = header.to_string();
                 let input_bite = decode(header_str).unwrap();
                 let input_header = String::from_utf8(input_bite).unwrap();
-                println!("{input_header:#?}");
 
                 return payload_input_deserialize(input_header).await;
             }
@@ -259,14 +226,13 @@ impl<'r> FromData<'r> for PayloadGuard {
         // get info request from body
         let input_body = match get_body(data).await {
             Ok(body) => body,
-            Err(e) => {
+            Err(_e) => {
                 return Outcome::Failure((
                     Status::BadRequest,
                     PayloadValidationError::ErrorMissingBody,
                 ))
             }
         };
-        println!("{input_body:#?}");
 
         payload_input_deserialize(input_body).await
     }
@@ -278,10 +244,7 @@ mod payload_guard_test {
     use rocket::http::{Header, Status};
     use rocket::local::blocking::Client;
 
-    use crate::{
-        setup_rocket,
-        utils::secret::{get_secret, secret_test_utils::generate_hash},
-    };
+    use crate::setup_rocket;
 
     #[test]
     fn test_get_eval() {

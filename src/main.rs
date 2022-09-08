@@ -6,59 +6,34 @@ use anyhow::Result;
 use log::warn;
 use once_cell::sync::Lazy;
 use rocket::{Build, Rocket};
-use serde::{Deserialize, Serialize};
-use serde_json::{Deserializer, Error, Serializer};
-use tonic::{
-    body::empty_body, body::BoxBody, transport::Server, IntoRequest, Request, Response, Status,
-};
-use tower::{Layer, Service, ServiceExt};
-use futures::{StreamExt, TryFutureExt};
-use hyper::body::aggregate;
-use hyper::body::{to_bytes, Buf, HttpBody};
-use hyper::Body;
-use middleware::{id, logger, resthttp1_guard::from_data_grpc, timer};
+
+use tonic::transport::Server;
+
+use middleware::{id, logger, timer};
 use opa_wasm::{Policy, Value};
-use opentelemetry::trace::FutureExt;
-use rdkafka::message::ToBytes;
-use rocket::form::FromForm;
-use rocket::http::ext::IntoCollection;
+
 use rs_utils::config::init_watcher;
-use std::borrow::{Borrow, BorrowMut};
-use std::fmt::Debug;
-use std::net::SocketAddr;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::str::from_utf8;
-use std::string::String;
-use std::time::{Instant, SystemTime};
-use std::{
-    task::{Context, Poll},
-    time::Duration,
-};
-use hyper::http::HeaderValue;
+
+use std::time::Duration;
+
 use tokio::sync::Mutex;
 use utils::{error_catcher::default, logger::setup_logger};
-use uuid::Uuid;
 
 pub mod open_policy_agency {
     tonic::include_proto!("openpolicyagency");
 }
-use open_policy_agency::{
-    InputRequest,
-    ResultReply,
-    opaproto_server::{OpaprotoServer, Opaproto}
-};
+use open_policy_agency::opaproto_server::OpaprotoServer;
 
 mod router;
 use router::{handle_metrics, health_alive, health_ready, post, OpaRouter};
 mod types;
-use types::{input, Result as OpaResult};
+
 mod middleware;
 use middleware::{grpchttp2_guard::intercept, grpchttp2_guard::MyMiddlewareLayer};
 mod controller;
-use controller::post::post_eval;
+
 mod utils;
-use utils::error::send_error;
+
 mod config;
 use config::CONFIG;
 
@@ -74,7 +49,6 @@ fn setup_rocket() -> Rocket<Build> {
             routes![post, handle_metrics, health_alive, health_ready],
         )
 }
-
 
 /// This launch the tonic server.
 async fn setup_tonic() -> Result<()> {

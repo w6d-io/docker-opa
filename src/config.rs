@@ -1,24 +1,13 @@
 use std::{collections::HashMap, path::Path};
 
-use notify::{
-    event::{AccessKind, AccessMode, Event, EventKind},
-    RecommendedWatcher, RecursiveMode, Watcher,
-};
-
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use figment::{
     providers::{Format, Yaml},
     Figment,
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
-use tokio::{
-    runtime::Handle,
-    sync::{
-        mpsc::{channel, Receiver},
-        RwLock,
-    },
-};
+use tokio::sync::RwLock;
 
 use rs_utils::config::Config;
 use rslib::{config::Kafka, kafka::Producer};
@@ -120,67 +109,5 @@ fn read_data(var: &str) -> String {
         Err(e) => {
             panic!("Error while reading Policy file: {e}");
         }
-    }
-}
-
-#[cfg(test)]
-mod test_config {
-    use super::*;
-
-    #[test]
-    fn test_update_config() {
-        let _config = update_config("configs/config.yaml").unwrap();
-    }
-
-    #[test]
-    fn test_init_config() {
-        std::env::set_var("TEST_CONFIG", "configs/config.yaml");
-        let _config = init_config("TEST_CONFIG");
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_init_config_panic() {
-        std::env::set_var("TEST_BAD_CONFIG", "examples/not_config.yaml");
-        let _config = init_config("TEST_BAD_CONFIG");
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn test_event_reactor() {
-        let path = "configs/config.yaml";
-        let event = notify::event::Event {
-            kind: EventKind::Access(AccessKind::Close(AccessMode::Write)),
-            paths: vec![Path::new(path).to_path_buf()],
-            attrs: notify::event::EventAttributes::new(),
-        };
-        event_reactor(&event, &path).await.unwrap();
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn test_event_poll() {
-        let (tx, rx) = channel(1);
-        let path = "configs/config.yaml";
-        let event = notify::event::Event {
-            kind: EventKind::Access(AccessKind::Close(AccessMode::Write)),
-            paths: vec![Path::new(path).to_path_buf()],
-            attrs: notify::event::EventAttributes::new(),
-        };
-        tx.send(Ok(event)).await.unwrap();
-        event_poll(rx, &path).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_event_poll_closed_chanel() {
-        let (tx, rx) = channel(1);
-        let path = "configs/config.yaml";
-        drop(tx);
-        let res = event_poll(rx, path).await;
-        assert!(res.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_config_watcher() {
-        let res = config_watcher("configs/config.yaml").await;
-        assert!(res.is_ok());
     }
 }
