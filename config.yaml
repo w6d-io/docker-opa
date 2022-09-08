@@ -1,8 +1,7 @@
 kafka:
-  service: 'kafka-0.kafka-headless.kafka.svc.cluster.local:9092'
+  service: "127.0.0.1:58640"
   topics:
-    producer: 'push_events'
-    error: 'webhook-error'
+    error: 'opa-error'
 
 salt: jlHQJMtz70WrDrsmrPEcnFeoCYEa3oIi
 salt_length: 16
@@ -20,3 +19,5 @@ env:
 
 redis:
   enabled: false
+
+

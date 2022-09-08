@@ -1,46 +1,46 @@
+use crate::Value;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Identity {
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Opadata {
     pub id: String,
     pub traits: Traits,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Traits {
     pub email: String,
-    pub providers: Vec<Provider>,
+    pub name: Name,
+    pub roles: Roles,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Provider {
-    pub name: String,
-    pub provider_type: String,
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Name {
+    pub first: String,
+    pub last: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IdentityOidc {
-    pub credentials: Credentials,
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Roles {
+    pub organizations: Vec<Value>,
+    #[serde(rename = "private_projects")]
+    pub private_projects: Vec<PrivateProject>,
+    pub scopes: Vec<Value>,
+    #[serde(rename = "affiliate_projects")]
+    pub affiliate_projects: Vec<Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Credentials {
-    pub oidc: Oidc,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Oidc {
-    pub config: Config,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Config {
-    pub providers: Vec<ConfigProvider>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ConfigProvider {
-    pub subject: String,
-    pub provider: String,
-    pub initial_access_token: String,
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivateProject {
+    pub key: i64,
+    pub value: String,
 }

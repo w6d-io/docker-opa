@@ -1,7 +1,9 @@
 pub mod input;
 pub use input::Input;
 
-pub mod opadata;
-pub use opadata::Opadata;
-
 pub mod kratos;
+pub use kratos::Opadata;
+
+pub mod result;
+pub use result::Result;
+

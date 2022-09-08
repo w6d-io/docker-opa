@@ -28,6 +28,5 @@ impl<'r> FromRequest<'r> for Ready {
             Err(e) => Outcome::Failure((Status::ServiceUnavailable, anyhow!(e))),
             Ok(_) => Outcome::Success(Ready),
         }
-
     }
 }

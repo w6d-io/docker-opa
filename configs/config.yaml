@@ -1,5 +1,5 @@
 kafka:
-  service: 'kafka-0.kafka-headless.kafka.svc.cluster.local:9092'
+  service: '127.0.0.1:58640'
   topics:
     error: 'opa-error'
 salt: "examples"

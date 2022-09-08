@@ -1,27 +1,66 @@
 #[allow(unused_imports)]
-
 #[macro_use]
 extern crate rocket;
-
+extern crate core;
 use anyhow::Result;
 use log::warn;
 use once_cell::sync::Lazy;
 use rocket::{Build, Rocket};
-
-mod config;
-mod controller;
-mod middleware;
-use middleware::{id, logger, timer};
-mod router;
-use router::{handle_metrics, health_alive, health_ready, post};
-mod utils;
+use serde::{Deserialize, Serialize};
+use serde_json::{Deserializer, Error, Serializer};
+use tonic::{
+    body::empty_body, body::BoxBody, transport::Server, IntoRequest, Request, Response, Status,
+};
+use tower::{Layer, Service, ServiceExt};
+use futures::{StreamExt, TryFutureExt};
+use hyper::body::aggregate;
+use hyper::body::{to_bytes, Buf, HttpBody};
+use hyper::Body;
+use middleware::{id, logger, resthttp1_guard::from_data_grpc, timer};
 use opa_wasm::{Policy, Value};
+use opentelemetry::trace::FutureExt;
+use rdkafka::message::ToBytes;
+use rocket::form::FromForm;
+use rocket::http::ext::IntoCollection;
+use rs_utils::config::init_watcher;
+use std::borrow::{Borrow, BorrowMut};
+use std::fmt::Debug;
+use std::net::SocketAddr;
+use std::ops::Deref;
+use std::pin::Pin;
+use std::str::from_utf8;
+use std::string::String;
+use std::time::{Instant, SystemTime};
+use std::{
+    task::{Context, Poll},
+    time::Duration,
+};
+use hyper::http::HeaderValue;
 use tokio::sync::Mutex;
 use utils::{error_catcher::default, logger::setup_logger};
-use rs_utils::config::init_watcher;
-use crate::config::CONFIG;
+use uuid::Uuid;
 
+pub mod open_policy_agency {
+    tonic::include_proto!("openpolicyagency");
+}
+use open_policy_agency::{
+    InputRequest,
+    ResultReply,
+    opaproto_server::{OpaprotoServer, Opaproto}
+};
+
+mod router;
+use router::{handle_metrics, health_alive, health_ready, post, OpaRouter};
 mod types;
+use types::{input, Result as OpaResult};
+mod middleware;
+use middleware::{grpchttp2_guard::intercept, grpchttp2_guard::MyMiddlewareLayer};
+mod controller;
+use controller::post::post_eval;
+mod utils;
+use utils::error::send_error;
+mod config;
+use config::CONFIG;
 
 /// This launch the rocket server.
 fn setup_rocket() -> Rocket<Build> {
@@ -34,6 +73,52 @@ fn setup_rocket() -> Rocket<Build> {
             "/",
             routes![post, handle_metrics, health_alive, health_ready],
         )
+}
+
+
+/// This launch the tonic server.
+async fn setup_tonic() -> Result<()> {
+    println!("setup_tonic 1");
+    let (shutdown_trigger, shutdown_signal1) = triggered::trigger();
+
+    info!("debug error");
+    println!("setup_tonic 2");
+    let addr = "127.0.0.1:3000".parse().unwrap();
+    println!("setup_tonic 3");
+
+    let opa = OpaRouter::default();
+    println!("setup_tonic 4");
+
+    let svc = OpaprotoServer::new(opa);
+    // The stack of middleware that our service will be wrapped in
+    let layer = tower::ServiceBuilder::new()
+        // Interceptors can be also be applied as middleware
+        .layer(tonic::service::interceptor(intercept))
+        // Apply middleware from tower
+        .timeout(Duration::from_secs(10))
+        // Apply our own middleware
+        .layer(MyMiddlewareLayer::default())
+        .into_inner();
+
+    println!("setup_tonic 5");
+
+    ctrlc::set_handler(move || {
+        shutdown_trigger.trigger();
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    println!("GreeterServer listening on {}", addr);
+
+    Server::builder()
+        // Wrap all services in the middleware stack
+        .layer(layer)
+        .add_service(svc)
+        .serve_with_shutdown(addr, shutdown_signal1)
+        .await?;
+
+    println!("setup_tonic 6");
+
+    Ok(())
 }
 
 ///this lauch ou grpc and rest server
@@ -58,8 +143,10 @@ async fn main() -> Result<()> {
     //initialise the lazy static for open telemetry
 
     let rocket_handle = tokio::spawn(setup_rocket().launch());
-    let (rocket_res,) = tokio::try_join!(rocket_handle)?;
-    rocket_res?;
+    println!("main 1");
+    let tonic_handle = tokio::spawn(setup_tonic());
+    let (_rocket_res, _tonic_res) = tokio::try_join!(rocket_handle, tonic_handle)?;
+
     Ok(())
 }
 
@@ -70,12 +157,12 @@ fn init_opa() -> Policy {
     // compilation wasm
     let policy_path = "configs/acl.rego";
     let query = "data.app.rbac.main";
-    let module = match opa_go::wasm::compile(query, &policy_path){
+    let module = match opa_go::wasm::compile(query, &policy_path) {
         Ok(module) => module,
-        Err(err) => panic!("{}", err)
+        Err(err) => panic!("{}", err),
     };
     match Policy::from_wasm(&module) {
         Ok(opa) => opa,
-        Err(err) => panic!("{:?}", err)
+        Err(err) => panic!("{:?}", err),
     }
 }

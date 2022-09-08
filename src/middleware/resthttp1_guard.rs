@@ -1,27 +1,50 @@
+use anyhow::anyhow;
+use base64::{decode, encode};
+use curl::easy::Easy;
+use hmac::digest::typenum::private::Trim;
+use hyper::Body;
+use log::debug;
+use rocket::{
+    data::{self, Data, FromData, Outcome, ToByteUnit},
+    http::Status,
+    request,
+    request::Request,
+    serde::json::serde_json,
+};
+use std::fmt::Display;
+use std::ops::Deref;
+use std::option::Option;
 use std::result;
 use std::str;
-use std::fmt::Display;
-use std::option::Option;
+use std::str::FromStr;
+use tonic::{Request as TonicRequest, Status as TonicStatus};
 
-use log::debug;
-use rocket::{data::{self, Data, FromData, Outcome, ToByteUnit}, http::Status, request, request::Request, serde::json::serde_json};
-use thiserror::Error;
-use anyhow::anyhow;
-use hmac::digest::typenum::private::Trim;
-use base64::{encode, decode};
-use curl::easy::Easy;
+use rdkafka::message::ToBytes;
+
+use serde::{Deserialize, Serialize};
+use serde_json::{Deserializer, Error, Serializer};
+
+use hyper::body;
+use hyper::body::aggregate;
+use std::mem::size_of_val;
+//use log::kv::ToValue;
+use prost::Message;
+use rocket::outcome::Outcome::Failure;
+//use log::kv::ToValue;
 use rslib::kafka;
 use serde_json::to_string;
+use thiserror::Error;
 
 #[allow(unused_imports)]
 use crate::{
-    config::{DATA, CONFIG},
+    config::{CONFIG, DATA},
+    open_policy_agency::InputRequest,
     types::Input,
     types::Opadata,
+    utils::error::send_error,
     utils::secret::{
         get_secret, validate_github_payload_sha256, validate_gitlab_payload, SecretError,
     },
-    utils::error::send_error,
 };
 
 #[derive(Debug, Error)]
@@ -55,18 +78,19 @@ pub enum PayloadValidationError {
 type Result<T, E = PayloadValidationError> = result::Result<T, E>;
 
 // the response struct
+#[derive(Debug)]
 pub struct PayloadGuard {
     pub(crate) input: Input,
     pub(crate) data: Opadata,
 }
 
-async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, PayloadGuard> {
+pub async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, PayloadGuard> {
     // get config of the opa api rust
     let config = &CONFIG.read().await;
 
     // curl kratos
     let url = match config.http.get("kratos") {
-        Some(url) =>  url.to_owned() + &input.kratos,
+        Some(url) => url.to_owned() + &input.kratos,
         None => {
             error!("error : url kratos is missing");
             return Outcome::Failure((
@@ -81,7 +105,7 @@ async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, Paylo
         Ok(resp) => resp,
         Err(e) => {
             error!("error while run request to kratos: {e}");
-            if let Err(e) = send_error("error", &e).await{
+            if let Err(e) = send_error("error", &e).await {
                 warn!("Failed to send error to kafka");
             };
 
@@ -94,34 +118,31 @@ async fn get_data_roles_from_kratos<'r>(input: Input) -> data::Outcome<'r, Paylo
 
     // get body text response and unmarchall to struct
     let data = match resp.json::<Opadata>().await {
-            Ok(data) => data,
-            Err(e) => {
-                error!("User ID Kratos not exist. Not get text request body: {e}");
-                if let Err(e) = send_error("error", &e).await{
-                    warn!("Failed to send error to kafka");
-                };
-                return Outcome::Failure((
-                    Status::Unauthorized,
-                    PayloadValidationError::ErrorBadRequest(e),
-                ));
-            }
-        };
+        Ok(data) => data,
+        Err(e) => {
+            error!("User ID Kratos not exist. Not get text request body: {e}");
+            if let Err(e) = send_error("error", &e).await {
+                warn!("Failed to send error to kafka");
+            };
+            return Outcome::Failure((
+                Status::Unauthorized,
+                PayloadValidationError::ErrorBadRequest(e),
+            ));
+        }
+    };
 
     // return the data and input struct by the payloadGuard
-    Outcome::Success(PayloadGuard{
-        input,
-        data,
-    })
+    Outcome::Success(PayloadGuard { input, data })
 }
 
 ///Deserialize a push event.
-async fn payload_input_deserialize<'r>(header: String) -> data::Outcome<'r, PayloadGuard> {
+pub async fn payload_input_deserialize<'r>(header: String) -> data::Outcome<'r, PayloadGuard> {
     // Deserializing payload input
     let input = match serde_json::from_str::<Input>(&header) {
         Ok(input) => input,
         Err(e) => {
             error!("error while deserializing the request input:{e}");
-            if let Err(e) = send_error("error", &e).await{
+            if let Err(e) = send_error("error", &e).await {
                 warn!("Failed to send error to kafka");
             };
             return Outcome::Failure((
@@ -132,15 +153,50 @@ async fn payload_input_deserialize<'r>(header: String) -> data::Outcome<'r, Payl
     };
 
     // verify the type of evaluation
-    if input.eval == "private_projects" || input.eval == "organizations" || input.eval == "scopes" || input.eval == "affiliate_projects" {
+    if input.eval == "private_projects"
+        || input.eval == "organizations"
+        || input.eval == "scopes"
+        || input.eval == "affiliate_projects"
+    {
         // get role of the user from kratos
         get_data_roles_from_kratos(input).await
     } else {
-        return Outcome::Failure((
-            Status::NotFound,
-            PayloadValidationError::ErrorWrongEvalName,
-        ));
+        return Outcome::Failure((Status::NotFound, PayloadValidationError::ErrorWrongEvalName));
     }
+}
+
+///Get body from GRPC request.
+///will fail if:
+/// - the body is not a valid utf8 string.
+/// - the body is empty.
+/// - the body is to big.
+pub async fn from_data_grpc(
+    body: TonicRequest<InputRequest>,
+) -> Result<PayloadGuard, tonic::Status> {
+    let grpc_params = body.into_inner();
+    let input = Input {
+        eval: grpc_params.eval,
+        kratos: grpc_params.kratos,
+        resource: grpc_params.resource,
+        method: grpc_params.method,
+        uri: grpc_params.uri,
+        role: grpc_params.role,
+    };
+
+    let result = match get_data_roles_from_kratos(input).await {
+        Outcome::Success(res) => res,
+        Outcome::Failure((_, PayloadValidationError::ErrorMissingQuery)) => {
+            return Err(TonicStatus::unavailable(
+                PayloadValidationError::ErrorMissingQuery.to_string(),
+            ))
+        }
+        Outcome::Failure((_, PayloadValidationError::ErrorBadRequest(e))) => {
+            return Err(TonicStatus::unavailable(e.to_string()))
+        }
+        _ => return Err(TonicStatus::unknown("Unknown error")),
+    };
+
+    Ok(result)
 }
 
 ///Get body from the request.
@@ -167,14 +223,12 @@ async fn get_body(data: Data<'_>) -> Result<String, PayloadValidationError> {
     Ok(body.into_inner())
 }
 
-
 #[rocket::async_trait]
 ///this guard validatde the pay load with a its hash then deserialize it
 impl<'r> FromData<'r> for PayloadGuard {
     type Error = PayloadValidationError;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
-
         // get info request from header
         let header = match req.headers().get_one("input") {
             Some(header) => Some(header),
@@ -182,15 +236,15 @@ impl<'r> FromData<'r> for PayloadGuard {
         };
         match header {
             None => {
-                println!("{}","Header is empty")
-            },
+                println!("{}", "Header is empty")
+            }
             Some(header) if !header.is_empty() => {
                 let header_str = header.to_string();
                 let input_bite = decode(header_str).unwrap();
                 let input_header = String::from_utf8(input_bite).unwrap();
                 println!("{input_header:#?}");
 
-                return payload_input_deserialize(input_header).await
+                return payload_input_deserialize(input_header).await;
             }
             Some(_) => {
                 error!("wrong eval type");
@@ -205,10 +259,12 @@ impl<'r> FromData<'r> for PayloadGuard {
         // get info request from body
         let input_body = match get_body(data).await {
             Ok(body) => body,
-            Err(e) => return Outcome::Failure((
-                Status::BadRequest,
-                PayloadValidationError::ErrorMissingBody
-            )),
+            Err(e) => {
+                return Outcome::Failure((
+                    Status::BadRequest,
+                    PayloadValidationError::ErrorMissingBody,
+                ))
+            }
         };
         println!("{input_body:#?}");
 
@@ -252,6 +308,4 @@ mod payload_guard_test {
     }
 
     static IDENTITY_POAYLOAD: &str = r#"{"id": "5cf289bd-4990-42ee-89dd-12e31df15028"}"#;
-
-
 }

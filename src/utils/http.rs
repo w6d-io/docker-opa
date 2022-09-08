@@ -82,7 +82,9 @@ mod test_http_client {
                 then.status(200).body(r#"{"examples":examples}"#);
             })
             .await;
-        let response = _put(&server.url("/examples"), r#"{"examples":3}"#).await.unwrap();
+        let response = _put(&server.url("/examples"), r#"{"examples":3}"#)
+            .await
+            .unwrap();
         mock.assert_async().await;
         assert_eq!(response.status(), StatusCode::OK)
     }

@@ -14,11 +14,14 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use tokio::{
     runtime::Handle,
-    sync::{mpsc::{channel, Receiver}, RwLock},
+    sync::{
+        mpsc::{channel, Receiver},
+        RwLock,
+    },
 };
 
-use rslib::{config::Kafka, kafka::Producer};
 use rs_utils::config::Config;
+use rslib::{config::Kafka, kafka::Producer};
 
 use crate::utils::kafka::update_producer;
 
@@ -59,7 +62,7 @@ impl Config for OPAConfig {
             bail!("config was not found");
         }
         let mut config: OPAConfig = Figment::new().merge(Yaml::file(path)).extract()?;
-        //config = update_producer(config)?;
+        config = update_producer(config)?;
         //info!("{config:?}");
         Ok(config)
     }
@@ -119,7 +122,6 @@ fn read_data(var: &str) -> String {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test_config {

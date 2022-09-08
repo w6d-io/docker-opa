@@ -8,4 +8,5 @@ pub struct Input {
     pub resource: i64,
     pub method: String,
     pub uri: String,
+    pub role: String,
 }

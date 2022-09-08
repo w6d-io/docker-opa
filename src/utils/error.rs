@@ -12,7 +12,8 @@ pub struct ErrorData<'a> {
 ///send error to the given kafka topic
 #[cfg(not(tarpaulin_include))]
 pub async fn send_error<T>(topic: &str, data: T) -> Result<()>
-where T: std::error::Error
+where
+    T: std::error::Error,
 {
     let error = ErrorData {
         code: "opa_internal_error",

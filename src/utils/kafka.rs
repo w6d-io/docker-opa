@@ -8,6 +8,7 @@ use crate::config::{OPAConfig, CONFIG};
 use rslib::kafka::Producer;
 
 ///update the producer Producers if needed.
+
 pub fn update_producer(mut config: OPAConfig) -> Result<OPAConfig> {
     let kafka = &config.kafka;
     let mut topics = match config.producers {
