@@ -239,7 +239,7 @@ impl<'r> FromData<'r> for PayloadGuard {
 }
 
 #[cfg(test)]
-mod payload_guard_test {
+mod resthttp1_guard_test {
 
     use rocket::http::{Header, Status};
     use rocket::local::blocking::Client;
