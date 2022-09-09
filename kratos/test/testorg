@@ -1,8 +1,0 @@
-{
-  "schema_id": "organization",
-  "traits": {
-    "id": 99999,
-    "name": "wildcard",
-    "projects": [0,111,222,333]
-  }
-}

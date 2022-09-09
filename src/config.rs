@@ -82,7 +82,7 @@ fn read_input(var: &str) -> String {
         Ok(path) => path,
         Err(e) => {
             warn!("error while reading policy environment variable: {e}, switching to fallback.");
-            "examples/input.json".to_owned()
+            "configs/input.json".to_owned()
         }
     };
     match std::fs::read_to_string(path) {
@@ -100,7 +100,7 @@ fn read_data(var: &str) -> String {
         Ok(path) => path,
         Err(e) => {
             warn!("error while reading policy environment variable: {e}, switching to fallback.");
-            "examples/kratos_payload.json".to_owned()
+            "configs/kratos_payload.json".to_owned()
         }
     };
 

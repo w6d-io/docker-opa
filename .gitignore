@@ -1,2 +1,14 @@
+# folder
+.idea/
+bin/
+/tmp/
 /target
-Cargo.lock
+
+# lock files
+*.lock
+
+# miscelaous
+*.swp
+
+# coverage and nohup
+*.out

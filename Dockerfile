@@ -69,6 +69,5 @@ WORKDIR /usr/local/bin/
 RUN apt-get update -y --fix-missing
 RUN apt-get install -y build-essential libpq-dev openssl libssl-dev ca-certificates libcurl4
 COPY --from=build /usr/src/opa/configs /usr/local/bin/configs
-COPY --from=build /usr/src/opa/examples /usr/local/bin/examples
 COPY --from=build /usr/local/cargo/bin/opa /usr/local/bin/opa
 CMD ["opa"]
