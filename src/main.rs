@@ -99,12 +99,12 @@ async fn setup_tonic() -> Result<()> {
 //! ## OPA
 //! OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory and integrates opa wasm.
 //!
-//! To start kratos follow the steps:
+//! To start the api follow the steps:
 //!
-//! ## RUN KRATOS (Before unit-test)
+//! ## RUN KRATOS (Before units-test)
 //!
 //! ```
-//! ## For started kratos
+//! ## For start kratos
 //! #Step 1:
 //! make
 //! #Step 2:
@@ -123,7 +123,7 @@ async fn setup_tonic() -> Result<()> {
 //! ## RUN OPA RUST AND CALL HIM
 //!
 //! ```
-//! ## For started opa rust api
+//! ## For start opa rust api
 //! #Step 1:
 //! cargo build
 //! #Step 2:
