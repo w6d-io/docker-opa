@@ -250,7 +250,7 @@ mod resthttp1_guard_test {
     fn test_get_eval() {
         let client = Client::untracked(setup_rocket()).unwrap();
         let req = client
-            .get("/eval")
+            .post("/")
             .header(Header::new("Content-Type", "application/json"))
             .body(CLIENT_POAYLOAD);
         let res = req.dispatch();

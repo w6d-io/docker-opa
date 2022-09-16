@@ -424,6 +424,7 @@ cat << EOF5 >  bin/dmgp.schema.json
 EOF5
 
 cat << EOF6 > bin/kratos.yml
+
 version: v0.9.0-alpha.3
 
 dsn: memory
@@ -652,7 +653,7 @@ flow=$(curl -s  --cookie $cookieJar --cookie-jar $cookieJar -X GET \
 
 
 # Get the flow ID for DEBUG
-#flowId=$(echo $flow | jq -r '.id')
+flowId=$(echo $flow | jq -r '.id')
 
 # Get the action URL
 actionUrl=$(echo $flow | jq -r '.ui.action')
@@ -706,12 +707,14 @@ session=$( \
     --data '{ "identifier": "'$username'", "password": "'$password'", "method": "password", "csrf_token": "'$csrfToken'" }' \
     "$actionUrl" \
 )
-
 #DEBUG
 #echo $session | jq
 
 resp=$(cat $cookieJar | grep -o "ory_kratos_session.*" | awk  '{print $2}')
-echo -n $resp
+#echo -n $resp
+curl -s --cookie $cookieJar --cookie-jar $cookieJar -H "Accept: application/json" \
+  http://127.0.0.1:4433/sessions/whoami | \
+  jq -r ".id"
 fi
 
 
