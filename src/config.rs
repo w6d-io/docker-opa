@@ -1,113 +1,96 @@
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    env::var,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Result};
 use figment::{
-    providers::{Format, Yaml},
+    providers::{Format, Toml},
     Figment,
 };
-use once_cell::sync::Lazy;
+use kafka::{
+    producer::{default_config, BaseProducer},
+    KafkaProducer,
+};
+use opa_wasm::Policy;
 use serde::Deserialize;
-use tokio::sync::RwLock;
 
 use rs_utils::config::Config;
-use rslib::{config::Kafka, kafka::Producer};
 
-use crate::utils::kafka::update_producer;
+#[derive(Deserialize, Default)]
+pub struct Kafka {
+    pub service: String,
+    pub topics: HashMap<String, String>,
+    #[serde(skip)]
+    pub producers: Option<HashMap<String, KafkaProducer<BaseProducer>>>,
+}
 
-#[derive(Deserialize)]
+impl Kafka {
+    ///update the producer Producers if needed.
+    pub fn update_producer(&mut self) -> Result<()> {
+        let mut new_producer = HashMap::new();
+        let producer = match self.producers {
+            Some(ref mut prod) => prod,
+            None => &mut new_producer,
+        };
+        for topic in self.topics.iter() {
+            producer.insert(
+                topic.0.to_owned(),
+                KafkaProducer::new(&default_config(&self.service), topic.0)?,
+            );
+        }
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Default)]
 pub struct OPAConfig {
     pub kafka: Kafka,
     pub salt: String,
     pub salt_length: usize,
     pub http: HashMap<String, String>,
-    pub grpc: HashMap<String, String>,
-
+    // pub grpc: HashMap<String, String>,
     #[serde(skip)]
-    pub producers: Option<HashMap<String, Producer>>,
+    pub path: Option<PathBuf>,
+    #[serde(skip)]
+    pub opa_policy: Option<Policy>,
 }
 
 ///static containing the config data. It is ititialised on first read then
 ///updated each time the file is writen.
-pub static CONFIG: Lazy<RwLock<OPAConfig>> = Lazy::new(|| RwLock::new(OPAConfig::new("CONFIG")));
+
 impl Config for OPAConfig {
-    ///initialise the config struct
-    fn new(var: &str) -> Self {
-        let path = match std::env::var(var) {
-            Ok(path) => path,
-            Err(e) => {
-                warn!("error while reading environment variable: {e}, switching to fallback.");
-                "configs/config.yaml".to_owned()
-            }
-        };
-        match Self::update(&path) {
-            Ok(conf) => conf,
-            Err(e) => panic!("failed to update config {:?}: {:?}", path, e),
-        }
+    fn set_path<T: AsRef<Path>>(&mut self, path: T) -> &mut Self {
+        self.path = Some(path.as_ref().to_path_buf());
+        self
     }
 
     ///update the config in the static variable
-    fn update<P: AsRef<Path>>(path: P) -> Result<Self> {
-        if !path.as_ref().exists() {
-            bail!("config was not found");
+    fn update(&mut self) -> Result<()> {
+        let path = match self.path {
+            Some(ref path) => path as &Path,
+            None => bail!("config file path not set"),
+        };
+        match path.try_exists() {
+            Ok(exists) if !exists => bail!("config was not found"),
+            Err(e) => bail!(e),
+            _ => (),
         }
-        let mut config: OPAConfig = Figment::new().merge(Yaml::file(path)).extract()?;
-        config = update_producer(config)?;
-        //info!("{config:?}");
-        Ok(config)
+        let mut config: OPAConfig = Figment::new().merge(Toml::file(path)).extract()?;
+        config.kafka.update_producer()?;
+        config.opa_policy = Some(init_opa()?);
+        *self = config;
+        Ok(())
     }
 }
 
-pub static POLICY: Lazy<String> = Lazy::new(|| read_policy("POLICY"));
-///initialise the config struct
-fn read_policy(var: &str) -> String {
-    let path = match std::env::var(var) {
-        Ok(path) => path,
-        Err(e) => {
-            warn!("error while reading policy environment variable: {e}, switching to fallback.");
-            "configs/acl.rego".to_owned()
-        }
-    };
-    match std::fs::read_to_string(path) {
-        Ok(file) => file,
-        Err(e) => {
-            panic!("Error while reading Policy file: {e}");
-        }
-    }
-}
-
-pub static INPUT: Lazy<String> = Lazy::new(|| read_input("INPUT"));
-///initialise the config struct
-fn read_input(var: &str) -> String {
-    let path = match std::env::var(var) {
-        Ok(path) => path,
-        Err(e) => {
-            warn!("error while reading policy environment variable: {e}, switching to fallback.");
-            "configs/input.json".to_owned()
-        }
-    };
-    match std::fs::read_to_string(path) {
-        Ok(file) => file,
-        Err(e) => {
-            panic!("Error while reading Policy file: {e}");
-        }
-    }
-}
-
-pub static DATA: Lazy<String> = Lazy::new(|| read_data("DATA"));
-///initialise the config struct
-fn read_data(var: &str) -> String {
-    let path = match std::env::var(var) {
-        Ok(path) => path,
-        Err(e) => {
-            warn!("error while reading policy environment variable: {e}, switching to fallback.");
-            "configs/kratos_payload.json".to_owned()
-        }
-    };
-
-    match std::fs::read_to_string(path) {
-        Ok(file) => file,
-        Err(e) => {
-            panic!("Error while reading Policy file: {e}");
-        }
-    }
+///initialise opa and compile policy to wasm
+fn init_opa() -> Result<Policy> {
+    // compilation wasm
+    let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
+    let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
+    let module = opa_go::wasm::compile(&query, &policy_path)?;
+    let policy = Policy::from_wasm(&module)?;
+    Ok(policy)
 }

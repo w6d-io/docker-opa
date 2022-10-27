@@ -40,13 +40,18 @@ impl Fairing for RequestTimer {
 
 #[cfg(test)]
 mod test_timer_fairing {
-    use rocket::local::blocking::Client;
+    use std::sync::Arc;
 
-    use crate::setup_rocket;
+    use rocket::local::blocking::Client;
+    use rs_utils::config::Config;
+    use tokio::sync::RwLock;
+
+    use crate::{config::OPAConfig, setup_rocket};
 
     #[test]
     fn test_timer_attachment() {
-        let client = Client::tracked(setup_rocket()).unwrap();
+        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
+        let client = Client::tracked(setup_rocket(config)).unwrap();
         let response = client
             .post("/webhook?providerId=github&providerType=github")
             .dispatch();

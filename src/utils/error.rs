@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::utils::kafka::send_to_kafka;
+use crate::{config::Kafka, utils::kafka::send_to_kafka};
 
 #[derive(Serialize)]
 pub struct ErrorData<'a> {
@@ -11,7 +11,7 @@ pub struct ErrorData<'a> {
 
 ///send error to the given kafka topic
 #[cfg(not(tarpaulin_include))]
-pub async fn send_error<T>(topic: &str, data: T) -> Result<()>
+pub async fn send_error<T>(config: &Kafka, topic: &str, data: T) -> Result<()>
 where
     T: std::error::Error,
 {
@@ -19,5 +19,5 @@ where
         code: "opa_internal_error",
         message: data.to_string(),
     };
-    send_to_kafka(topic, &error).await
+    send_to_kafka(config, topic, &error).await
 }

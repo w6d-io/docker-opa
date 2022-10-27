@@ -1,3 +1,4 @@
+use log::{debug, error};
 use once_cell::sync::Lazy;
 use opentelemetry_prometheus::PrometheusExporter;
 use prometheus::{Encoder, TextEncoder};

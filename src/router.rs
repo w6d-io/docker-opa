@@ -1,18 +1,18 @@
-use anyhow::Result;
+use std::sync::Arc;
 
-use tonic::{Request, Response, Status};
+use rocket::{get, post, State};
+use tokio::sync::RwLock;
+
+use rs_utils::anyhow_rocket::Result;
 
 use crate::{
+    config::OPAConfig,
     controller::post::post_eval,
-    middleware::{
-        ping_guard::Ready, resthttp1_guard::from_data_grpc, resthttp1_guard::PayloadGuard,
-    },
-    open_policy_agency::{opaproto_server::Opaproto, InputRequest, ResultReply},
-    types::Result as BooleanResult,
-    utils::{rocket_anyhow, telemetry::gather_telemetry},
+    middleware::{ping_guard::Ready, resthttp1_guard::PayloadGuard},
+    utils::telemetry::gather_telemetry,
 };
 
-//##
+/* //##
 //##
 //## GRPC (HTTP 1) Route
 //##
@@ -26,7 +26,7 @@ impl Opaproto for OpaRouter {
         &self,
         request: Request<InputRequest>,
     ) -> Result<Response<ResultReply>, Status> {
-        let data = from_data_grpc(request).await?;
+        let data = from_data_grpc(request, config).await?;
         let resp = post_eval(data.input, data.data).await;
         let eval: BooleanResult = resp.unwrap();
         let reply = ResultReply {
@@ -35,7 +35,7 @@ impl Opaproto for OpaRouter {
 
         Ok(Response::new(reply))
     }
-}
+} */
 
 //##
 //##
@@ -44,9 +44,9 @@ impl Opaproto for OpaRouter {
 //##
 ///route to post
 #[post("/", data = "<data>")]
-pub async fn post(data: PayloadGuard) -> rocket_anyhow::Result<String> {
+pub async fn post(data: PayloadGuard, config: &State<Arc<RwLock<OPAConfig>>>) -> Result<String> {
     // logger::log::router_error("wrong eval type")
-    let eval = post_eval(data.input, data.data).await?;
+    let eval = post_eval(data.input, data.data, config).await?;
     let resp = serde_json::to_string(&eval)?;
     Ok(resp)
 }
@@ -59,8 +59,12 @@ pub async fn handle_metrics() -> String {
 
 ///route for prometheus telemetry
 #[get("/health/alive")]
-pub async fn health_alive() {}
+pub async fn health_alive() -> Result<()> {
+    Ok(())
+}
 
 ///route for prometheus telemetry
 #[get("/health/ready")]
-pub async fn health_ready(_ready: Ready) {}
+pub async fn health_ready(_ready: Ready) -> Result<()> {
+    Ok(())
+}

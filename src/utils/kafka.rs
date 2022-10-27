@@ -1,38 +1,25 @@
-use std::collections::HashMap;
-
 #[allow(unused_imports)]
 use anyhow::{anyhow, bail, Result};
+
+use log::info;
 use rocket::serde::{json::serde_json, Serialize};
 
-use crate::config::{OPAConfig, CONFIG};
-use rslib::kafka::Producer;
-
-///update the producer Producers if needed.
-
-pub fn update_producer(mut config: OPAConfig) -> Result<OPAConfig> {
-    let kafka = &config.kafka;
-    let mut topics = match config.producers {
-        Some(prod) => prod,
-        None => HashMap::new(),
-    };
-    for topic in kafka.topics.iter() {
-        topics.insert(topic.0.to_owned(), Producer::new(kafka, topic.0)?);
-    }
-    config.producers = Some(topics);
-    Ok(config)
-}
+use crate::config::Kafka;
 
 ///Send data to kafka.
 #[cfg(not(tarpaulin_include))]
-pub async fn send_to_kafka<T: Serialize>(_topic: &str, data: T) -> Result<()> {
-    let _message = serde_json::to_string(&data)?;
-    let _conf = CONFIG.read().await;
+pub async fn send_to_kafka<T: Serialize>(_config: &Kafka, _topic: &str, data: T) -> Result<()> {
+    let _message = kafka::KafkaMessage {
+        headers: None,
+        key: None,
+        payload: serde_json::to_string(&data)?,
+    };
     #[cfg(not(test))]
-    match &_conf.producers {
+    match &_config.producers {
         Some(prod) => prod
             .get(_topic)
             .ok_or_else(|| anyhow!("failed to get asked kafka topic!"))?
-            .produce(&_message)?,
+            .produce(_message)?,
         None => bail!("topic not found"),
     }
     info!("data succesfully sent");
@@ -41,12 +28,17 @@ pub async fn send_to_kafka<T: Serialize>(_topic: &str, data: T) -> Result<()> {
 
 #[cfg(test)]
 mod test_kafka {
+    use std::collections::HashMap;
+
+    use rs_utils::config::Config;
 
     use super::*;
+    use crate::config::OPAConfig;
 
     #[tokio::test]
     async fn test_send_to_kafka() {
         let map = HashMap::from([("examples".to_owned(), 42)]);
-        assert!(send_to_kafka("examples", &map).await.is_ok());
+        let config = OPAConfig::new("CONFIG");
+        assert!(send_to_kafka(&config.kafka, "examples", &map).await.is_ok());
     }
 }

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use log::info;
 use once_cell::sync::Lazy;
 use reqwest::{Body, Client, Response};
 

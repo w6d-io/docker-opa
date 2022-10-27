@@ -1,5 +1,5 @@
 use opentelemetry::global;
-use rocket::{http::Status, Request};
+use rocket::{catch, http::Status, Request};
 
 ///Default error handler it is called if the error status code
 ///is no treated in a specific handler.

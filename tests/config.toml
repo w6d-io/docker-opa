@@ -1,0 +1,10 @@
+salt = "jlHQJMtz70WrDrsmrPEcnFeoCYEa3oIi"
+salt_length = 16
+
+[kafka]
+service = "127.0.0.1:58640"
+topics = {error = "opa-error"}
+
+[http]
+kratos = "http://kratos.kratos:4434/admin/identities/"
+
