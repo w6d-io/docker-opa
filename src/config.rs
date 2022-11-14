@@ -13,7 +13,7 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
-use opa_wasm::Policy;
+use wasmtime::{Config as WasmConfig, Engine, Module, Store};
 use serde::Deserialize;
 
 use rs_utils::config::Config;
@@ -44,6 +44,11 @@ impl Kafka {
     }
 }
 
+pub struct OPAPolicy{
+    pub module: Module,
+    pub store: Store<()>
+}
+
 #[derive(Deserialize, Default)]
 pub struct OPAConfig {
     pub kafka: Kafka,
@@ -54,7 +59,7 @@ pub struct OPAConfig {
     #[serde(skip)]
     pub path: Option<PathBuf>,
     #[serde(skip)]
-    pub opa_policy: Option<Policy>,
+    pub opa_policy: Option<OPAPolicy>,
 }
 
 ///static containing the config data. It is ititialised on first read then
@@ -78,6 +83,7 @@ impl Config for OPAConfig {
             _ => (),
         }
         let mut config: OPAConfig = Figment::new().merge(Toml::file(path)).extract()?;
+        config.path = Some(path.to_owned());
         config.kafka.update_producer()?;
         config.opa_policy = Some(init_opa()?);
         *self = config;
@@ -86,11 +92,20 @@ impl Config for OPAConfig {
 }
 
 ///initialise opa and compile policy to wasm
-fn init_opa() -> Result<Policy> {
+fn init_opa() -> Result<OPAPolicy> {
     // compilation wasm
+    let mut config = WasmConfig::new();
+    config.async_support(true);
+
+    let engine = Engine::new(&config)?;
     let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
     let module = opa_go::wasm::compile(&query, &policy_path)?;
-    let policy = Policy::from_wasm(&module)?;
-    Ok(policy)
+    let module = Module::new(&engine, module)?;
+    let store = Store::new(&engine, ());
+    let opa = OPAPolicy{
+        module,
+        store
+    };
+    Ok(opa)
 }

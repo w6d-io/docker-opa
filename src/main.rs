@@ -1,9 +1,8 @@
-use std::sync::Arc;
+use std::{sync::Arc, path::Path};
 
 use anyhow::Result;
 use log::warn;
 use once_cell::sync::Lazy;
-use opa_wasm::Value;
 use rocket::{catchers, routes, Build, Rocket};
 use tokio::sync::RwLock;
 
@@ -86,17 +85,20 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 /// enjoy :)
 #[rocket::main]
 async fn main() -> Result<()> {
+    std::env::set_var("RUST_LOG", "DEBUG");
+    std::env::set_var("CONFIG", "configs/config.toml");
     let path = std::env::var("CONFIG").unwrap_or_else(|_| {
         warn!("config variable not found switching to fallback");
-        "config/".to_owned()
+        "config/config.toml".to_owned()
     });
+    let path = Path::new(&path);
+    let path_dir = path.parent().unwrap().to_owned();
     setup_logger(std::io::stdout()).expect("failled to initialize the logger");
     let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
-    tokio::task::spawn(init_watcher(path, config.clone(), None));
+    tokio::task::spawn(init_watcher(path_dir, config.clone(), None));
     Lazy::force(&utils::telemetry::METER);
 
     let rocket_handle = tokio::spawn(setup_rocket(config).launch());
-    println!("main 1");
     let _rocket_res = rocket_handle.await?;
 
     Ok(())

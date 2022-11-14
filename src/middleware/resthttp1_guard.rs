@@ -79,7 +79,7 @@ pub async fn get_data_roles_from_kratos<'r>(
     let resp = match reqwest::get(url).await {
         Ok(resp) => resp,
         Err(e) => {
-            error!("error while run request to kratos: {e}");
+            error!("error while sending request to kratos: {e}");
             if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
                 warn!("Failed to send error to kafka");
             };
@@ -91,11 +91,25 @@ pub async fn get_data_roles_from_kratos<'r>(
         }
     };
 
+    let resp = match resp.error_for_status(){
+        Ok(resp) => resp,
+        Err(e) => {
+            error!("kratos returned an error code: {e}");
+            if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
+                warn!("Failed to send error to kafka");
+            };
+
+            return Outcome::Failure((
+                Status::BadRequest,
+                PayloadValidationError::ErrorBadRequest(e),
+            ));
+        }
+    };
     // get body text response and unmarchall to struct
     let data = match resp.json::<Opadata>().await {
         Ok(data) => data,
         Err(e) => {
-            error!("User ID Kratos not exist. Not get text request body: {e}");
+            error!("User ID Kratos do not exist. No text request body: {e}");
             if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
                 warn!("Failed to send error to kafka");
             };
@@ -183,11 +197,7 @@ impl<'r> FromData<'r> for PayloadGuard {
             Outcome::Forward(_) => return Outcome::Forward(data),
         };
         // get info request from header
-        let header = match req.headers().get_one("input") {
-            Some(header) => Some(header),
-            None => req.headers().get_one("input"),
-        };
-        match header {
+        match req.headers().get_one("input"){
             None => {
                 info!("Header is empty")
             }
