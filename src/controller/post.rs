@@ -19,7 +19,7 @@ pub async fn post_eval(
     config: &Arc<RwLock<OPAConfig>>,
 ) -> Result<Response> {
     // serde data and input struct to string
-    let data_roles = serde_json::to_string(&data.traits.roles)?;
+    let data_roles = serde_json::to_string(&data.metadata_admin.roles)?;
     let input_str = serde_json::to_string(&input)?;
     let data_str = "{\"roles\":".to_owned() + &data_roles as &str + "}";
 

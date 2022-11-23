@@ -91,7 +91,7 @@ pub async fn get_data_roles_from_kratos<'r>(
         }
     };
 
-    let resp = match resp.error_for_status(){
+    match resp.error_for_status_ref(){
         Ok(resp) => resp,
         Err(e) => {
             error!("kratos returned an error code: {e}");
