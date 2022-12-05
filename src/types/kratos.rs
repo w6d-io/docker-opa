@@ -41,7 +41,7 @@ pub struct MetadataAdmin{
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct Opadata {
+pub struct OpaData {
     pub id: String,
     pub traits: Traits,
     pub created_at: String,

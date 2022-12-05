@@ -3,6 +3,7 @@ use std::{result, sync::Arc};
 use anyhow::anyhow;
 use base64::decode;
 use log::{error, info, warn};
+use serde::Deserialize;
 use rocket::{
     data::{self, Data, FromData, ToByteUnit},
     http::Status,
@@ -14,10 +15,11 @@ use rocket::{
 use thiserror::Error;
 use tokio::sync::RwLock;
 
-// #[allow(unused_imports)]
+use rs_utils::kratos::Identity;
+
 use crate::{
     config::OPAConfig,
-    types::{kratos::Opadata, opa::Input},
+    types::opa::OpaInput,
     utils::error::send_error,
 };
 
@@ -27,16 +29,10 @@ use crate::{
 pub enum PayloadValidationError {
     #[error("the body is missing")]
     ErrorMissingBody,
-    #[error("a parameter is missing")]
-    ErrorMissingQuery,
-    // #[error("failed to get the project id")]
-    // ErrorFailedToParseRepositoryID(#[from] anyhow::Error),
     #[error("failed to deserialize: {0}")]
     ErrorFailedToDeserialize(#[from] serde_json::Error),
     #[error("payload as broken utf8 encoding: {0}")]
     ErrorMalformedPayload(#[from] std::io::Error),
-    #[error("wrong eval argument name in the input payload")]
-    ErrorWrongEvalName,
     #[error("the body is to big")]
     ErrorBodyToBig,
     #[error("wrong field type in the input payload")]
@@ -49,89 +45,22 @@ pub enum PayloadValidationError {
 
 type Result<T, E = PayloadValidationError> = result::Result<T, E>;
 
+
 // the response struct
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct PayloadGuard {
-    pub(crate) input: Input,
-    pub(crate) data: Opadata,
-}
-
-pub async fn get_data_roles_from_kratos<'r>(
-    input: Input,
-    config: &Arc<RwLock<OPAConfig>>,
-) -> data::Outcome<'r, PayloadGuard> {
-    // get config of the opa api rust
-    let config_read = config.read().await;
-
-    // curl kratos
-    let url = match config_read.http.get("kratos") {
-        Some(url) => url.to_owned() + &input.kratos as &str,
-        None => {
-            error!("error : url kratos is missing");
-            return Outcome::Failure((
-                Status::BadRequest,
-                PayloadValidationError::ErrorMissingQuery,
-            ));
-        }
-    };
-
-    // verify kratos response
-    let resp = match reqwest::get(url).await {
-        Ok(resp) => resp,
-        Err(e) => {
-            error!("error while sending request to kratos: {e}");
-            if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
-                warn!("Failed to send error to kafka");
-            };
-
-            return Outcome::Failure((
-                Status::BadRequest,
-                PayloadValidationError::ErrorBadRequest(e),
-            ));
-        }
-    };
-
-    match resp.error_for_status_ref(){
-        Ok(resp) => resp,
-        Err(e) => {
-            error!("kratos returned an error code: {e}");
-            if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
-                warn!("Failed to send error to kafka");
-            };
-
-            return Outcome::Failure((
-                Status::BadRequest,
-                PayloadValidationError::ErrorBadRequest(e),
-            ));
-        }
-    };
-    // get body text response and unmarchall to struct
-    let data = match resp.json::<Opadata>().await {
-        Ok(data) => data,
-        Err(e) => {
-            error!("User ID Kratos do not exist. No text request body: {e}");
-            if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
-                warn!("Failed to send error to kafka");
-            };
-            return Outcome::Failure((
-                Status::Unauthorized,
-                PayloadValidationError::ErrorBadRequest(e),
-            ));
-        }
-    };
-
-    // return the data and input struct by the payloadGuard
-    Outcome::Success(PayloadGuard { input, data })
+    pub(crate) input: OpaInput,
+    pub(crate) data: Identity,
 }
 
 ///Deserialize a push event.
 pub async fn payload_input_deserialize<'r>(
-    header: String,
+    data: String,
     config: &Arc<RwLock<OPAConfig>>,
 ) -> data::Outcome<'r, PayloadGuard> {
     let config_read = config.read().await;
     // Deserializing payload input
-    let input = match serde_json::from_str::<Input>(&header) {
+    let payload = match serde_json::from_str::<PayloadGuard>(&data) {
         Ok(input) => input,
         Err(e) => {
             error!("error while deserializing the request input:{e}");
@@ -144,18 +73,7 @@ pub async fn payload_input_deserialize<'r>(
             ));
         }
     };
-
-    // verify the type of evaluation
-    if input.eval == "private_projects"
-        || input.eval == "organizations"
-        || input.eval == "scopes"
-        || input.eval == "affiliate_projects"
-    {
-        // get role of the user from kratos
-        get_data_roles_from_kratos(input, config).await
-    } else {
-        Outcome::Failure((Status::NotFound, PayloadValidationError::ErrorWrongEvalName))
-    }
+    Outcome::Success(payload)
 }
 
 ///Get body from the request.

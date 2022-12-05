@@ -18,54 +18,40 @@
 #	* Rego Iteration: https://www.openpolicyagent.org/docs/latest/#iteration
 
 package app.rbac
-# By default, deny requests.
+import future.keywords.if
+
+default main = false
 
 main {
-    # set the role  if the ressource id is present in the role attribute of the user
-    role = roles_attributes[_].value
+	some i
 
-    # set the role attribute of the user by the resource name (eval input)
-    roles_attributes = data.roles[input.eval]
-    # check if the ressource id is present in the role attribute of the user
-    roles_attributes[_].key == input.resource
-    role = roles_attributes[_].value
-    matchUrl with input as {
-       "eval": input.eval,
-       "path": input.uri,
-       "method": input.method,
-       "role": role
-    }
+	#    # set the role  if the ressource id is present in the role attribute of the user
+	roles = data.metadata_admin[_]
+	roles[i].key == input.resource
+	role := roles[i].value
+	matchUrl with input as {
+		"method": input.method,
+		"uri": input.uri,
+		"role": role,
+	}
 }
 
+uri := "api/projects" if{
+    	regex.match(`api\/projects\?projectId=[0-9]+`, input.uri)
+} else := input.uri
+
 matchUrl {
-api_attributes =
-    [{
-      "get": {
-        { "key":"api/projects", "value": ["admin", "owner", "billing", "editor", "contributor"] },
-        { "key":"api/project/{project_id:[0-9]+}", "value": ["admin", "owner", "billing", "editor", "contributor"] },
-        { "key":"api/projects/stacks", "value": ["admin", "owner", "billing", "editor",  "contributor"] }
-        },
-      "post": {
-        { "key":"api/project", "value": ["admin", "owner"] }
-       },
-      "delete": {
-        { "key":"api/project/{project_id:[0-9]+}", "value":["admin"] }
-       },
-      "put": {
-        { "key":"api/project", "value":["admin"] }
-       }
-    }]
+	some k
+	api_attributes = {
+		"get": [
+			{"key": "api/projects", "value": ["admin", "owner", "billing", "editor", "contributor"]},
+			{"key": "api/projects/stacks", "value": ["admin", "owner", "billing", "editor", "contributor"]},
+		],
+		"post": {{"key": "api/projects", "value": ["admin", "owner"]}},
+		"put": {{"key": "api/projects", "value": ["admin"]}},
+	}
 
-api_resources =
-   [
-      "private_projects",
-      "affiliate_projects",
-      "organizations",
-      "scopes"
-   ]
-
-    api_resources[_] == input.eval
-    uri_list = api_attributes[_][input.method]
-    uri_list[_].key == input.path
-    uri_list[_].value[_] == input.role
+	uri_list := api_attributes[input.method]
+	uri_list[k].key == uri
+	uri_list[k].value[_] == input.role
 }

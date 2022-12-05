@@ -8,10 +8,8 @@ pub struct Response {
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Input {
-    pub eval: String,
-    pub kratos: String,
-    pub resource: i64,
+pub struct OpaInput {
+    pub resource: String,
     pub method: String,
     pub uri: String,
     pub role: String,
