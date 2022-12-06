@@ -1,6 +1,6 @@
-FROM rust:1.61-bullseye AS build
+FROM rust:1.65-bullseye AS build
 
-ENV GOLANG_VERSION 1.14.2
+ENV GOLANG_VERSION 1.19
 
 # gcc for cgo
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -59,8 +59,8 @@ WORKDIR /usr/src/opa
 COPY . .
 RUN apt-get dist-upgrade && apt-get update -y
 RUN apt-get install -y build-essential cmake libpthread-stubs0-dev zlib1g-dev zlib1g
-#RUN git config --global url."https://${JOB_USER}:${JOB_TOKEN}@gitlab.w6d.io/".insteadOf "https://gitlab.w6d.io/"
-RUN ./do_config.sh
+RUN git config --global url."https://${JOB_USER}:${JOB_TOKEN}@gitlab.w6d.io/".insteadOf "https://gitlab.w6d.io/"
+#RUN ./do_config.sh
 RUN rustup component add rustfmt
 RUN cargo install --path ./
 
@@ -69,5 +69,7 @@ WORKDIR /usr/local/bin/
 RUN apt-get update -y --fix-missing
 RUN apt-get install -y build-essential libpq-dev openssl libssl-dev ca-certificates libcurl4
 COPY --from=build /usr/src/opa/configs /usr/local/bin/configs
+COPY --from=build /usr/src/opa/examples /usr/local/bin/examples
 COPY --from=build /usr/local/cargo/bin/opa /usr/local/bin/opa
 CMD ["opa"]
+
