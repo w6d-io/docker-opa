@@ -35,7 +35,6 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
             routes![post, handle_metrics, health_alive, health_ready],
         )
 }
-///this lauch ou grpc and rest server
 /// ## OPA
 /// OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory and integrates opa wasm.
 ///
@@ -74,13 +73,6 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 /// Get a identity ID to KRATOS SERVICE
 /// #Step 2
 /// curl -X POST -L http://127.0.0.1:8000 -H "Content-Type: application/json" -d '{"kratos": "<Kratos Identity ID>", "eval": "private_projects","resource": 222,"role":"admin","method": "get", "uri": "api/projects" }'
-///
-/// ## For call to GRPCURL
-/// #Step 1:
-/// Get a identity ID to KRATOS SERVICE
-/// #Step 2
-/// grpcurl -plaintext -import-path ./src/proto -proto openpolicyagency.proto -d '<Kratos Identity ID>", "role":"Toutniquer2", "eval":"Toutniquer2", "uri":"Toutniquer2", "resource":1234, "method":"Toutniquer4"}' '[::]:3000' openpolicyagency.Opaproto/GetDecision//! ```
-/// ```
 ///
 /// enjoy :)
 #[rocket::main]

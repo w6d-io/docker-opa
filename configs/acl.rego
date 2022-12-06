@@ -36,10 +36,12 @@ main {
 	}
 }
 
+#transform uri query to base query
 uri := "api/projects" if{
     	regex.match(`api\/projects\?projectId=[0-9]+`, input.uri)
 } else := input.uri
 
+# check end point right
 matchUrl {
 	some k
 	api_attributes = {

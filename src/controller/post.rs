@@ -12,6 +12,7 @@ use crate::{
     types::opa::{OpaInput, Response},
 };
 
+/// validate the input data and identity angaint the wasm policy module
 pub async fn post_eval(
     input: OpaInput,
     data: Identity,

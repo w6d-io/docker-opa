@@ -8,7 +8,7 @@ use rs_utils::anyhow_rocket::Result;
 use crate::{
     config::OPAConfig,
     controller::post::post_eval,
-    middleware::{ping_guard::Ready, resthttp1_guard::PayloadGuard},
+    middleware::resthttp1_guard::PayloadGuard,
     utils::telemetry::gather_telemetry,
 };
 
@@ -65,6 +65,6 @@ pub async fn health_alive() -> Result<()> {
 
 ///route for prometheus telemetry
 #[get("/health/ready")]
-pub async fn health_ready(_ready: Ready) -> Result<()> {
+pub async fn health_ready() -> Result<()> {
     Ok(())
 }
