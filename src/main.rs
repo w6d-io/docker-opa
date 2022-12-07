@@ -13,7 +13,7 @@ use router::{handle_metrics, health_alive, health_ready, post};
 mod types;
 
 mod middleware;
-use middleware::{id, logger, timer};
+use middleware::{logger, timer};
 mod controller;
 
 mod utils;
@@ -26,7 +26,6 @@ use config::OPAConfig;
 fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
     rocket::build()
         .manage(config)
-        .attach(id::CorrelationId)
         .attach(timer::RequestTimer)
         .attach(logger::RequestLogger)
         .register("/", catchers![default])
@@ -74,19 +73,25 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 /// #Step 2
 /// curl -X POST -L http://127.0.0.1:8000 -H "Content-Type: application/json" -d '{"kratos": "<Kratos Identity ID>", "eval": "private_projects","resource": 222,"role":"admin","method": "get", "uri": "api/projects" }'
 ///
+///set var:
+///CONFIG for config file path
+///OPA_POLICY for opa path must be the same parent dir as CONFIG or the config 
+///loader will not work correctly!!!!!!!
+///OPA_QUERY query in rego
+///
 /// enjoy :)
 #[rocket::main]
 async fn main() -> Result<()> {
     std::env::set_var("RUST_LOG", "DEBUG");
-    std::env::set_var("CONFIG", "configs/config.toml");
-    let path = std::env::var("CONFIG").unwrap_or_else(|_| {
+    std::env::set_var("CONFIG_OPA", "configs/config.toml");
+    let path = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
         warn!("config variable not found switching to fallback");
         "config/config.toml".to_owned()
     });
     let path = Path::new(&path);
     let path_dir = path.parent().unwrap().to_owned();
     setup_logger(std::io::stdout()).expect("failled to initialize the logger");
-    let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
+    let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG_OPA")));
     tokio::task::spawn(init_watcher(path_dir, config.clone(), None));
     Lazy::force(&utils::telemetry::METER);
 

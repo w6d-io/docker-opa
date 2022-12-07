@@ -52,9 +52,6 @@ pub struct OPAPolicy{
 #[derive(Deserialize, Default)]
 pub struct OPAConfig {
     pub kafka: Kafka,
-    pub salt: String,
-    pub salt_length: usize,
-    pub http: HashMap<String, String>,
     // pub grpc: HashMap<String, String>,
     #[serde(skip)]
     pub path: Option<PathBuf>,

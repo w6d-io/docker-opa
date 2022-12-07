@@ -165,6 +165,45 @@ mod resthttp1_guard_test {
 
     use crate::{config::OPAConfig, setup_rocket};
 
+    static CLIENT_POAYLOAD: &str = r#"{
+    "input": {
+        "resource": "222",
+        "role":"admin",
+        "method": "get",
+        "uri": "api/projects?projectId=dddd"
+    },
+    "data": {
+        "id": "12a9733f-4e9c-4598-9f54-0db582223fce",
+        "metadata_admin": {
+            "organizations": [],
+            "private_projects": [{
+                "key": "222",
+                "value": "admin"
+            }],
+            "scopes": [],
+            "affiliate_projects": []
+        },
+        "schema_id": "person",
+        "schema_url": "",
+        "traits": {
+            "email": "test2@wildcard.io",
+            "name": {
+                "first": "testy",
+                "last": "testo"
+            },
+            "roles": {
+                "organizations": [],
+                "private_projects": [{
+                    "key": "222",
+                    "value": "admin"
+                }],
+                "scopes": [],
+                "affiliate_projects": []
+            } 
+        }
+    }
+}"#;
+
     #[test]
     fn test_get_eval() {
         let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
@@ -177,19 +216,5 @@ mod resthttp1_guard_test {
         assert_eq!(res.status(), Status::Ok)
     }
 
-    static CLIENT_POAYLOAD: &str = r#"{"id": "5cf289bd-4990-42ee-89dd-12e31df15028"}"#;
 
-    #[test]
-    fn test_post_kratos_identity() {
-        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
-        let client = Client::untracked(setup_rocket(config)).unwrap();
-        let req = client
-            .post("/kratos?id=5cf289bd-4990-42ee-89dd-12e31df15028")
-            .header(Header::new("Content-Type", "application/json"))
-            .body(IDENTITY_POAYLOAD);
-        let res = req.dispatch();
-        assert_eq!(res.status(), Status::Ok)
-    }
-
-    static IDENTITY_POAYLOAD: &str = r#"{"id": "5cf289bd-4990-42ee-89dd-12e31df15028"}"#;
 }
