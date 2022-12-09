@@ -25,8 +25,8 @@ figment = {version = "0.10.*", features = ["yaml"]}
 opentelemetry = "0.17.*"
 prometheus = "0.13.*"
 opentelemetry-prometheus = "0.10.*"
-rs-utils = {git = "https://gitlab.w6d.io/w6d/rust/rs-utils"}
-libkafka = {git = "https://gitlab.w6d.io/w6d/rust/libkafka", branch = "develop"}
+rs-utils = {git = "https://github.com/w6d-io/rs-utils"}
+libkafka = {git = "https://github.com/w6d-io/libkafka", branch = "develop"}
 serde = "1.0"
 serde_json = "1.0"
 opa-wasm = {git = "https://github.com/matrix-org/rust-opa-wasm"}
