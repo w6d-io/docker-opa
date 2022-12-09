@@ -1,7 +1,9 @@
 FROM rust:1.65-bullseye AS build
 
 ENV GOLANG_VERSION 1.19
-
+ARG JOB_TOKEN
+ARG JOB_USER
+ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 # gcc for cgo
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		g++ \
