@@ -13,6 +13,7 @@ To start the api follow the steps:
 cargo build
 #Step 2:
 cargo run
-curl -X POST -L http://127.0.0.1:8000 -H "Content-Type: application/json" -d '{"input": {"resource": "222","role":"admin","method": "get", "uri": "<uri/to/the/caller>" }, "data": {<kratos identity json>}}'
+curl -X POST -L http://127.0.0.1:8000 -H "Content-Type: application/json" -d '{"input": {"resource": "222","role":"admin",\
+"method": "get", "uri": "<uri/to/the/caller>" }, "data": {<kratos identity json>}}'
 
 enjoy :)
