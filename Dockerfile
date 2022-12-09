@@ -15,9 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
-		wget https://go.dev/dl/go1.19.linux-amd64.tar.gz \
-		tar -xvf go1.19.linux-amd64.tar.gz \
-		mv go /usr/local 
+\
+	wget https://go.dev/dl/go1.19.linux-amd64.tar.gz; \
+	tar -xvf go1.19.linux-amd64.tar.gz; \
+	mv go /usr/local
 
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
