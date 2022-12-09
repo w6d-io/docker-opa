@@ -7,7 +7,7 @@ To start the api follow the steps:
 
 ### RUN OPA RUST AND CALL HIM
 
-```rust
+```bash
 ## For start opa rust api
 #Step 1:
 cargo build
