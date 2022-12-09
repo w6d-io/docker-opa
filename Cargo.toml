@@ -31,5 +31,5 @@ serde = "1.0"
 serde_json = "1.0"
 opa-wasm = {git = "https://github.com/matrix-org/rust-opa-wasm"}
 wasmtime = "3.0.*"
-opa-go = {git = "https://github.com/w6d-io/opa-rs"}
+opa-go = {git = "https://github.com/w6d-io/rs-opa"}
 base64 = "0.13.0"
