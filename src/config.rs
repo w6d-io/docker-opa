@@ -16,6 +16,7 @@ use kafka::{
 use wasmtime::{Config as WasmConfig, Engine, Module, Store};
 use serde::Deserialize;
 
+use opa_go::wasm::Wasm;
 use rs_utils::config::Config;
 
 #[derive(Deserialize, Default)]
@@ -97,8 +98,8 @@ fn init_opa() -> Result<OPAPolicy> {
     let engine = Engine::new(&config)?;
     let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
-    let module = opa_go::wasm::compile(&query, &policy_path)?;
-    let module = Module::new(&engine, module)?;
+    let wasm = Wasm::new(&query, &policy_path).build()?;
+    let module = Module::new(&engine, wasm)?;
     let store = Store::new(&engine, ());
     let opa = OPAPolicy{
         module,
