@@ -82,8 +82,6 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 /// enjoy :)
 #[rocket::main]
 async fn main() -> Result<()> {
-    std::env::set_var("RUST_LOG", "DEBUG");
-    std::env::set_var("CONFIG_OPA", "configs/config.toml");
     let path = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
         warn!("config variable not found switching to fallback");
         "config/config.toml".to_owned()
