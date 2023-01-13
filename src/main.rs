@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
     let path = Path::new(&path);
     let path_dir = path.parent().unwrap().to_owned();
     setup_logger(std::io::stdout()).expect("failled to initialize the logger");
-    let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG_OPA")));
+    let config = Arc::new(RwLock::new(OPAConfig::new(&path)));
     tokio::task::spawn(init_watcher(path_dir, config.clone(), None));
     Lazy::force(&utils::telemetry::METER);
 

@@ -16,7 +16,6 @@
 #
 #	* Rego comparison to other systems: https://www.openpolicyagent.org/docs/latest/comparison-to-other-systems/
 #	* Rego Iteration: https://www.openpolicyagent.org/docs/latest/#iteration
-
 package app.rbac
 import future.keywords.if
 
@@ -50,7 +49,8 @@ matchUrl {
 			{"key": "api/projects/stacks", "value": ["admin", "owner", "billing", "editor", "contributor"]},
 		],
 		"post": {{"key": "api/projects", "value": ["admin", "owner"]}},
-		"put": {{"key": "api/projects", "value": ["admin"]}},
+		"put": {{"key": "api/projects", "value": ["admin", "owner"]}},
+		"delete":{{"key": "api/projects", "value": ["admin", "owner"]}},
 	}
 
 	uri_list := api_attributes[input.method]
