@@ -38,7 +38,7 @@ mod test_kafka {
     #[tokio::test]
     async fn test_send_to_kafka() {
         let map = HashMap::from([("examples".to_owned(), 42)]);
-        let config = OPAConfig::new("CONFIG");
+        let config = OPAConfig::new("CONFIG").await;
         assert!(send_to_kafka(&config.kafka, "examples", &map).await.is_ok());
     }
 }

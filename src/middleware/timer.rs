@@ -48,9 +48,9 @@ mod test_timer_fairing {
 
     use crate::{config::OPAConfig, setup_rocket};
 
-    #[test]
-    fn test_timer_attachment() {
-        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
+    #[tokio::test]
+    async fn test_timer_attachment() {
+        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG").await));
         let client = Client::tracked(setup_rocket(config)).unwrap();
         let response = client
             .post("/webhook?providerId=github&providerType=github")

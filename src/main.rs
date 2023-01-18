@@ -82,14 +82,14 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 /// enjoy :)
 #[rocket::main]
 async fn main() -> Result<()> {
-    let path = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
+    let path_env = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
         warn!("config variable not found switching to fallback");
         "config/config.toml".to_owned()
     });
-    let path = Path::new(&path);
+    let path = Path::new(&path_env);
     let path_dir = path.parent().unwrap().to_owned();
     setup_logger(std::io::stdout()).expect("failled to initialize the logger");
-    let config = Arc::new(RwLock::new(OPAConfig::new(&path)));
+    let config = Arc::new(RwLock::new(OPAConfig::new(&path_env).await));
     tokio::task::spawn(init_watcher(path_dir, config.clone(), None));
     Lazy::force(&utils::telemetry::METER);
 

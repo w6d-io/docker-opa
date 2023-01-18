@@ -204,9 +204,9 @@ mod resthttp1_guard_test {
     }
 }"#;
 
-    #[test]
-    fn test_get_eval() {
-        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG")));
+    #[tokio::test]
+    async fn test_get_eval() {
+        let config = Arc::new(RwLock::new(OPAConfig::new("CONFIG").await));
         let client = Client::untracked(setup_rocket(config)).unwrap();
         let req = client
             .post("/")

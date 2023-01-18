@@ -13,6 +13,7 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
+use rocket::async_trait;
 use wasmtime::{Config as WasmConfig, Engine, Module, Store};
 use serde::Deserialize;
 
@@ -63,6 +64,7 @@ pub struct OPAConfig {
 ///static containing the config data. It is ititialised on first read then
 ///updated each time the file is writen.
 
+#[async_trait]
 impl Config for OPAConfig {
     fn set_path<T: AsRef<Path>>(&mut self, path: T) -> &mut Self {
         self.path = Some(path.as_ref().to_path_buf());
@@ -70,7 +72,7 @@ impl Config for OPAConfig {
     }
 
     ///update the config in the static variable
-    fn update(&mut self) -> Result<()> {
+    async fn update(&mut self) -> Result<()> {
         let path = match self.path {
             Some(ref path) => path as &Path,
             None => bail!("config file path not set"),
