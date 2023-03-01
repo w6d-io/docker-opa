@@ -1,4 +1,4 @@
-FROM rust:1.65-bullseye AS build
+FROM rust:1.67-bullseye AS build
 
 ENV GOLANG_VERSION 1.19
 ARG JOB_TOKEN
