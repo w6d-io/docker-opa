@@ -9,12 +9,12 @@ use rs_utils::kratos::Identity;
 
 use crate::{
     config::OPAConfig,
-    types::opa::{OpaInput, Response},
+    types::opa::Response,
 };
 
 /// validate the input data and identity angaint the wasm policy module
 pub async fn post_eval(
-    input: OpaInput,
+    input: serde_json::Value,
     data: Identity,
     config: &Arc<RwLock<OPAConfig>>,
 ) -> Result<Response> {

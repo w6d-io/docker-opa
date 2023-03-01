@@ -19,7 +19,6 @@ use rs_utils::kratos::Identity;
 
 use crate::{
     config::OPAConfig,
-    types::opa::OpaInput,
     utils::error::send_error,
 };
 
@@ -49,7 +48,7 @@ type Result<T, E = PayloadValidationError> = result::Result<T, E>;
 // the response struct
 #[derive(Debug, Deserialize)]
 pub struct PayloadGuard {
-    pub(crate) input: OpaInput,
+    pub(crate) input: serde_json::Value,
     pub(crate) data: Identity,
 }
 
