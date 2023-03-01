@@ -84,7 +84,7 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 async fn main() -> Result<()> {
     let path_env = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
         warn!("config variable not found switching to fallback");
-        "config/config.toml".to_owned()
+        "configs/config.toml".to_owned()
     });
     let path = Path::new(&path_env);
     let path_dir = path.parent().unwrap().to_owned();
