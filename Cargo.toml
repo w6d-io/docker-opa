@@ -9,7 +9,7 @@ httpmock = "0.6.*"
 atty = "0.2"
 
 [dependencies]
-tokio = {version = "1.29.*", features = ["rt-multi-thread"]}
+tokio = {version = "1.32.*", features = ["rt-multi-thread"]}
 rocket = {version = "0.5.0-rc", features = ["json"]}
 futures = "0.3.*"
 reqwest = {version = "0.11.*", features = ["json"]}
@@ -29,7 +29,7 @@ rs-utils = {git = "https://github.com/w6d-io/rs-utils"}
 libkafka = {git = "https://github.com/w6d-io/libkafka", branch = "develop"}
 serde = "1.0"
 serde_json = "1.0"
-opa-wasm = {git = "https://github.com/matrix-org/rust-opa-wasm"}
-wasmtime = "11.0.*"
+opa-wasm = {git = "https://github.com/nhaquet-w6d/rust-opa-wasm"}
+wasmtime = "12.0.*"
 opa-go = {git = "https://github.com/w6d-io/rs-opa"}
 base64 = "0.13.0"

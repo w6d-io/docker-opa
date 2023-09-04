@@ -4,9 +4,6 @@ bin/
 /tmp/
 /target
 
-# lock files
-*.lock
-
 # miscelaous
 *.swp
 
