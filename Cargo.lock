@@ -2506,7 +2506,7 @@ dependencies = [
 [[package]]
 name = "opa-wasm"
 version = "0.1.0"
-source = "git+https://github.com/nhaquet-w6d/rust-opa-wasm#e6770146c8f839317229cce7465c4a5098a45ef2"
+source = "git+https://github.com/nhaquet-w6d/rust-opa-wasm#14f97381bdb0d3fc984ffdfaffc03d51d51fa691"
 dependencies = [
  "anyhow",
  "base64 0.21.3",
@@ -2524,6 +2524,7 @@ dependencies = [
  "http-serde",
  "json-patch",
  "md-5",
+ "once_cell",
  "parse-size",
  "rand",
  "regex",
@@ -2580,9 +2581,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.92"
+version = "0.9.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db7e971c2c2bba161b2d2fdf37080177eff520b3bc044787c7f1f5f9e78d869b"
+checksum = "db4d56a4c0478783083cfafcc42493dd4a981d41669da64b4572a2a089b51b1d"
 dependencies = [
  "cc",
  "libc",
@@ -3740,9 +3741,9 @@ dependencies = [
 
 [[package]]
 name = "shlex"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
+checksum = "a7cee0529a6d40f580e7a5e6c495c8fbfe21b7b52795ed4bb5e62cdf92bc6380"
 
 [[package]]
 name = "signal-hook"
