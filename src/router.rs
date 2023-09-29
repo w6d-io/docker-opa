@@ -47,7 +47,7 @@ impl Opaproto for OpaRouter {
 pub async fn post(data: PayloadGuard, config: &State<Arc<RwLock<OPAConfig>>>) -> Result<String> {
     // logger::log::router_error("wrong eval type")
     let eval = post_eval(data.input, data.data, config).await?;
-    let resp = serde_json::to_string(&eval)?;
+    let resp = serde_json::to_string(&eval.validate)?;
     Ok(resp)
 }
 
