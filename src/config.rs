@@ -13,6 +13,7 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
+use log::info;
 use rocket::async_trait;
 use wasmtime::{Config as WasmConfig, Engine, Module, Store};
 use serde::Deserialize;
@@ -99,6 +100,7 @@ fn init_opa() -> Result<OPAPolicy> {
 
     let engine = Engine::new(&config)?;
     let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
+    info!("Using policy from: {}!", policy_path);
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
     let wasm = Wasm::new(&query, &policy_path).build()?;
     let module = Module::new(&engine, wasm)?;
