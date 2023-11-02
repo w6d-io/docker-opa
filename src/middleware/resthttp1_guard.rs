@@ -66,7 +66,7 @@ pub async fn payload_input_deserialize<'r>(
             if let Err(_e) = send_error(&config_read.kafka, "error", &e).await {
                 warn!("Failed to send error to kafka");
             };
-            return Outcome::Failure((
+            return Outcome::Error((
                 Status::BadRequest,
                 PayloadValidationError::ErrorFailedToDeserialize(e),
             ));
@@ -107,11 +107,11 @@ impl<'r> FromData<'r> for PayloadGuard {
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
         let config = match req.guard::<&State<Arc<RwLock<OPAConfig>>>>().await {
             Outcome::Success(state) => state,
-            Outcome::Failure(e) => {
+            Outcome::Error(e) => {
                 let error = anyhow!(e.0.reason().unwrap());
-                return Outcome::Failure((e.0, PayloadValidationError::from(error)));
+                return Outcome::Error((e.0, PayloadValidationError::from(error)));
             }
-            Outcome::Forward(_) => return Outcome::Forward(data),
+            Outcome::Forward(_) => return Outcome::Forward((data, Status::ImATeapot)),
         };
         // get info request from header
         match req.headers().get_one("input"){
@@ -128,7 +128,7 @@ impl<'r> FromData<'r> for PayloadGuard {
             Some(_) => {
                 error!("wrong eval type");
                 // logger::log::outcome_failure("wrong eval type")
-                return Outcome::Failure((
+                return Outcome::Error((
                     Status::BadRequest,
                     PayloadValidationError::ErrorWrongEvent,
                 ));
@@ -139,7 +139,7 @@ impl<'r> FromData<'r> for PayloadGuard {
         let input_body = match get_body(data).await {
             Ok(body) => body,
             Err(_e) => {
-                return Outcome::Failure((
+                return Outcome::Error((
                     Status::BadRequest,
                     PayloadValidationError::ErrorMissingBody,
                 ))
