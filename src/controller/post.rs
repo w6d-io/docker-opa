@@ -32,12 +32,12 @@ pub async fn post_eval(
     debug!("entry_list: {:?}", entry_list);
     // evaluate input and get boolean result
     let opa_result: Vec<serde_json::Value> = policy.evaluate(&mut opa.store, "eval", &input).await?;
+    info!("{opa_result:?}");
     debug!("opa_result: {opa_result:?}");
     let mut eval = Response { validate: false };
     if !opa_result.is_empty() {
         eval.validate = true;
     }
-
     // Serialize it to a JSON string.
     Ok(eval)
 }
