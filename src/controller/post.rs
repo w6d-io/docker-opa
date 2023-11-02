@@ -29,7 +29,7 @@ pub async fn post_eval(
     // set data in opa wasm instance
     let policy = runtime.with_data(&mut opa.store, &data).await?;
     let entry_list = policy.entrypoints();
-    debug!("entry_list: {:?}", entry_list);
+    info!("entry_list: {:?}", entry_list);
     // evaluate input and get boolean result
     let opa_result: Vec<serde_json::Value> = policy.evaluate(&mut opa.store, "eval", &input).await?;
     info!("{opa_result:?}");
