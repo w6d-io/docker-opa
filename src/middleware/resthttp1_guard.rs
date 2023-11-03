@@ -3,7 +3,6 @@ use std::{result, sync::Arc};
 use anyhow::anyhow;
 use base64::decode;
 use log::{error, info, warn};
-use serde::Deserialize;
 use rocket::{
     data::{self, Data, FromData, ToByteUnit},
     http::Status,
@@ -12,15 +11,13 @@ use rocket::{
     serde::json::serde_json,
     State,
 };
+use serde::Deserialize;
 use thiserror::Error;
 use tokio::sync::RwLock;
 
 use rs_utils::kratos::Identity;
 
-use crate::{
-    config::OPAConfig,
-    utils::error::send_error,
-};
+use crate::{config::OPAConfig, utils::error::send_error};
 
 #[derive(Debug, Error)]
 #[allow(clippy::enum_variant_names)]
@@ -43,7 +40,6 @@ pub enum PayloadValidationError {
 }
 
 type Result<T, E = PayloadValidationError> = result::Result<T, E>;
-
 
 // the response struct
 #[derive(Debug, Deserialize)]
@@ -114,7 +110,7 @@ impl<'r> FromData<'r> for PayloadGuard {
             Outcome::Forward(_) => return Outcome::Forward((data, Status::ImATeapot)),
         };
         // get info request from header
-        match req.headers().get_one("input"){
+        match req.headers().get_one("input") {
             None => {
                 info!("Header is empty")
             }
@@ -214,6 +210,4 @@ mod resthttp1_guard_test {
         let res = req.dispatch();
         assert_eq!(res.status(), Status::Ok)
     }
-
-
 }

@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use rocket::{get, post, State};
-use tokio::sync::RwLock;
 use log::info;
+use rocket::{get, post, State};
 use rs_utils::anyhow_rocket::Result;
+use tokio::sync::RwLock;
 
 use crate::{
-    config::OPAConfig,
-    controller::post::post_eval,
-    middleware::resthttp1_guard::PayloadGuard,
+    config::OPAConfig, controller::post::post_eval, middleware::resthttp1_guard::PayloadGuard,
     utils::telemetry::gather_telemetry,
 };
 

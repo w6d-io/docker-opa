@@ -1,4 +1,4 @@
-use std::{sync::Arc, path::Path};
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use log::warn;
@@ -75,7 +75,7 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 ///
 ///set var:
 ///CONFIG for config file path
-///OPA_POLICY for opa path must be the same parent dir as CONFIG or the config 
+///OPA_POLICY for opa path must be the same parent dir as CONFIG or the config
 ///loader will not work correctly!!!!!!!
 ///OPA_QUERY query in rego
 ///

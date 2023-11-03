@@ -15,8 +15,8 @@ use kafka::{
 };
 use log::info;
 use rocket::async_trait;
-use wasmtime::{Config as WasmConfig, Engine, Module, Store};
 use serde::Deserialize;
+use wasmtime::{Config as WasmConfig, Engine, Module};
 
 use opa_go::wasm::Wasm;
 use rs_utils::config::Config;
@@ -47,9 +47,9 @@ impl Kafka {
     }
 }
 
-pub struct OPAPolicy{
+pub struct OPAPolicy {
+    pub engine: Engine,
     pub module: Module,
-    pub store: Store<()>
 }
 
 #[derive(Deserialize, Default)]
@@ -104,10 +104,6 @@ fn init_opa() -> Result<OPAPolicy> {
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
     let wasm = Wasm::new(&query, &policy_path).build()?;
     let module = Module::new(&engine, wasm)?;
-    let store = Store::new(&engine, ());
-    let opa = OPAPolicy{
-        module,
-        store
-    };
+    let opa = OPAPolicy { engine, module };
     Ok(opa)
 }
