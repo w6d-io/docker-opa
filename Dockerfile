@@ -1,6 +1,6 @@
 FROM rust:1.73-bullseye AS build
 
-ENV GOLANG_VERSION 1.21
+ENV GOLANG_VERSION 1.21.4
 ARG JOB_TOKEN
 ARG JOB_USER
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
@@ -18,8 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN set -eux; \
 \
-	wget https://go.dev/dl/go1.21.linux-amd64.tar.gz; \
-	tar -xvf go1.21.linux-amd64.tar.gz; \
+	wget https://go.dev/dl/go1.21.4.linux-amd64.tar.gz; \
+	tar -xvf go1.21.4.linux-amd64.tar.gz; \
 	mv go /usr/local
 
 ENV GOPATH /go
