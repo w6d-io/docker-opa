@@ -16,9 +16,7 @@ use kafka::{
 use log::info;
 use rocket::async_trait;
 use serde::Deserialize;
-use wasmtime::{Config as WasmConfig, Engine, Module};
 
-use opa_go::wasm::Wasm;
 use rs_utils::config::Config;
 
 #[derive(Deserialize, Default)]
@@ -48,8 +46,8 @@ impl Kafka {
 }
 
 pub struct OPAPolicy {
-    pub engine: Engine,
-    pub module: Module,
+    pub query: String,
+    pub module: PathBuf,
 }
 
 #[derive(Deserialize, Default)]
@@ -94,16 +92,11 @@ impl Config for OPAConfig {
 
 ///initialise opa and compile policy to wasm
 fn init_opa() -> Result<OPAPolicy> {
-    // compilation wasm
-    let mut config = WasmConfig::new();
-    config.async_support(true);
 
-    let engine = Engine::new(&config)?;
-    let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
-    info!("Using policy from: {}!", policy_path);
+    let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
+    info!("Using policy from: {}!", module_path);
+    let module = PathBuf::from(module_path);
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
-    let wasm = Wasm::new(&query, &policy_path).build()?;
-    let module = Module::new(&engine, wasm)?;
-    let opa = OPAPolicy { engine, module };
+    let opa = OPAPolicy { query, module };
     Ok(opa)
 }

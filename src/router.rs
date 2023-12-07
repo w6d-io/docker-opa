@@ -6,7 +6,7 @@ use rs_utils::anyhow_rocket::Result;
 use tokio::sync::RwLock;
 
 use crate::{
-    config::OPAConfig, controller::post::post_eval, middleware::resthttp1_guard::PayloadGuard,
+    config::OPAConfig, controller::evaluate, middleware::resthttp1_guard::PayloadGuard,
     utils::telemetry::gather_telemetry,
 };
 
@@ -44,7 +44,7 @@ impl Opaproto for OpaRouter {
 #[post("/", data = "<data>")]
 pub async fn post(data: PayloadGuard, config: &State<Arc<RwLock<OPAConfig>>>) -> Result<String> {
     // logger::log::router_error("wrong eval type")
-    let eval = post_eval(data.input, data.data, config).await?;
+    let eval = evaluate(data.input, data.data, config).await?;
     let resp = serde_json::to_string(&eval.validate)?;
     Ok(resp)
 }
