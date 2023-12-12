@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     env::var,
     path::{Path, PathBuf},
+    fmt,
 };
 
 use anyhow::{bail, Result};
@@ -13,19 +14,32 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
-use log::info;
-use rocket::async_trait;
+use axum::async_trait;
 use serde::Deserialize;
+use tracing::info;
 
 use rs_utils::config::Config;
 
-#[derive(Deserialize, Default)]
+pub const CONFIG_FALLBACK: &str = "tests/config.toml";
+
+#[derive(Deserialize, Default, Clone)]
 pub struct Kafka {
     pub service: String,
     pub topics: HashMap<String, String>,
     #[serde(skip)]
     pub producers: Option<HashMap<String, KafkaProducer<BaseProducer>>>,
 }
+
+impl fmt::Debug for Kafka {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Kafka")
+         .field("service", &self.service)
+         .field("topics", &self.topics)
+         .finish_non_exhaustive()
+    }
+}
+
+
 
 impl Kafka {
     ///update the producer Producers if needed.
@@ -45,14 +59,28 @@ impl Kafka {
     }
 }
 
+#[derive(Deserialize, Clone, Default, Debug)]
 pub struct OPAPolicy {
     pub query: String,
     pub module: PathBuf,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Clone, Default, Debug)]
+pub struct Ports {
+    pub main: String,
+    pub health: String,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+pub struct Service {
+    pub addr: String,
+    pub ports: Ports,
+}
+
+#[derive(Deserialize, Default, Clone, Debug)]
 pub struct OPAConfig {
     pub kafka: Kafka,
+    pub service: Service,
     // pub grpc: HashMap<String, String>,
     #[serde(skip)]
     pub path: Option<PathBuf>,

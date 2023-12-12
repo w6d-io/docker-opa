@@ -1,8 +1,8 @@
 #[allow(unused_imports)]
 use anyhow::{anyhow, bail, Result};
 
-use log::info;
-use rocket::serde::{json::serde_json, Serialize};
+use tracing::info;
+use serde::Serialize;
 
 use crate::config::Kafka;
 
