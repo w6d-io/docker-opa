@@ -1,6 +1,3 @@
-salt = "jlHQJMtz70WrDrsmrPEcnFeoCYEa3oIi"
-salt_length = 16
-
 [kafka]
 service = "127.0.0.1:58640"
 topics = {error = "opa-error"}
@@ -8,3 +5,7 @@ topics = {error = "opa-error"}
 [http]
 kratos = "http://127.0.0.1:4434/admin/identities/"
 
+[service]
+addr = "0.0.0.0"
+ports.main = "8000"
+ports.health = "2040"

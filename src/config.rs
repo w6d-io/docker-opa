@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     env::var,
     path::{Path, PathBuf},
+    fmt,
 };
 
 use anyhow::{bail, Result};
@@ -13,21 +14,32 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
-use log::info;
-use rocket::async_trait;
+use axum::async_trait;
 use serde::Deserialize;
-use wasmtime::{Config as WasmConfig, Engine, Module};
+use tracing::info;
 
-use opa_go::wasm::Wasm;
 use rs_utils::config::Config;
 
-#[derive(Deserialize, Default)]
+pub const CONFIG_FALLBACK: &str = "tests/config.toml";
+
+#[derive(Deserialize, Default, Clone)]
 pub struct Kafka {
     pub service: String,
     pub topics: HashMap<String, String>,
     #[serde(skip)]
     pub producers: Option<HashMap<String, KafkaProducer<BaseProducer>>>,
 }
+
+impl fmt::Debug for Kafka {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Kafka")
+         .field("service", &self.service)
+         .field("topics", &self.topics)
+         .finish_non_exhaustive()
+    }
+}
+
+
 
 impl Kafka {
     ///update the producer Producers if needed.
@@ -47,14 +59,28 @@ impl Kafka {
     }
 }
 
+#[derive(Deserialize, Clone, Default, Debug)]
 pub struct OPAPolicy {
-    pub engine: Engine,
-    pub module: Module,
+    pub query: String,
+    pub module: PathBuf,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Clone, Default, Debug)]
+pub struct Ports {
+    pub main: String,
+    pub health: String,
+}
+
+#[derive(Deserialize, Clone, Default, Debug)]
+pub struct Service {
+    pub addr: String,
+    pub ports: Ports,
+}
+
+#[derive(Deserialize, Default, Clone, Debug)]
 pub struct OPAConfig {
     pub kafka: Kafka,
+    pub service: Service,
     // pub grpc: HashMap<String, String>,
     #[serde(skip)]
     pub path: Option<PathBuf>,
@@ -94,16 +120,11 @@ impl Config for OPAConfig {
 
 ///initialise opa and compile policy to wasm
 fn init_opa() -> Result<OPAPolicy> {
-    // compilation wasm
-    let mut config = WasmConfig::new();
-    config.async_support(true);
 
-    let engine = Engine::new(&config)?;
-    let policy_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
-    info!("Using policy from: {}!", policy_path);
+    let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
+    info!("Using policy from: {}!", module_path);
+    let module = PathBuf::from(module_path);
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
-    let wasm = Wasm::new(&query, &policy_path).build()?;
-    let module = Module::new(&engine, wasm)?;
-    let opa = OPAPolicy { engine, module };
+    let opa = OPAPolicy { query, module };
     Ok(opa)
 }

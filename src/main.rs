@@ -1,39 +1,25 @@
-use std::{path::Path, sync::Arc};
+use std::{future::Future, sync::Arc};
 
 use anyhow::Result;
-use log::warn;
-use once_cell::sync::Lazy;
-use rocket::{catchers, routes, Build, Rocket};
-use tokio::sync::RwLock;
+use axum::{routing::{post, get}, Router, Server};
+
+use stream_cancel::Tripwire;
+use tokio::{sync::RwLock, task::JoinHandle};
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
+use tracing::{debug, info, warn};
+use tracing_subscriber::{fmt, EnvFilter};
 
 use rs_utils::config::{init_watcher, Config};
 
+mod handler;
+use handler::{fallback, shutdown_signal, shutdown_signal_trigger};
 mod router;
-use router::{handle_metrics, health_alive, health_ready, post};
-mod types;
-
-mod middleware;
-use middleware::{logger, timer};
+use router::{alive, ready, eval_rego};
 mod controller;
-
-mod utils;
-use utils::{error_catcher::default, logger::setup_logger};
-
 mod config;
-use config::OPAConfig;
+use config::{OPAConfig, CONFIG_FALLBACK};
+mod error;
 
-/// This launch the rocket server.
-fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
-    rocket::build()
-        .manage(config)
-        .attach(timer::RequestTimer)
-        .attach(logger::RequestLogger)
-        .register("/", catchers![default])
-        .mount(
-            "/",
-            routes![post, handle_metrics, health_alive, health_ready],
-        )
-}
 /// ## OPA
 /// OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory and integrates opa wasm.
 ///
@@ -80,21 +66,83 @@ fn setup_rocket(config: Arc<RwLock<OPAConfig>>) -> Rocket<Build> {
 ///OPA_QUERY query in rego
 ///
 /// enjoy :)
-#[rocket::main]
+type ConfigState = Arc<RwLock<OPAConfig>>;
+
+///main router config
+pub fn app(shared_state: ConfigState) -> Router {
+    info!("configuring main router");
+
+    Router::new()
+        .route("/", post(eval_rego))
+        .with_state(shared_state)
+        .fallback(fallback)
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+}
+
+///heatlh router config
+pub fn health(shared_state: ConfigState) -> Router {
+    info!("configuring health router");
+    let route = Router::new()
+        .route("/alive", get(alive))
+        .route("/ready", get(ready));
+    Router::new()
+        .nest("/health", route)
+        .fallback(fallback)
+        .with_state(shared_state)
+}
+
+///launch http router
+fn make_http<T>(
+    shared_state: ConfigState,
+    f: fn(ConfigState) -> Router,
+    addr: String,
+    signal: T,
+) -> JoinHandle<Result<(), hyper::Error>>
+where
+    T: Future<Output = ()> + std::marker::Send + 'static,
+{
+    info!("listening on {}", addr);
+    //todo: add path for tlscertificate
+    let handle = tokio::spawn(
+        Server::bind(&addr.parse().unwrap())
+            .serve(f(shared_state).into_make_service())
+            .with_graceful_shutdown(signal),
+    );
+    info!("lauching http server on: {addr}");
+    handle
+}
+
+#[cfg(not(tarpaulin_include))]
+#[tokio::main]
 async fn main() -> Result<()> {
-    let path_env = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
-        warn!("config variable not found switching to fallback");
-        "configs/config.toml".to_owned()
+    let logger = fmt()
+        .with_target(false)
+        .with_level(true)
+        .with_env_filter(EnvFilter::from_default_env());
+    match std::env::var("RUST_LOG") {
+        Ok(env) if env == "debug" => logger.pretty().init(),
+        _ => logger.init(),
+    }
+
+    let config_path = std::env::var("CONFIG").unwrap_or_else(|_| {
+        warn!("Config variable not found switching to fallback");
+        CONFIG_FALLBACK.to_owned()
     });
-    let path = Path::new(&path_env);
-    let path_dir = path.parent().unwrap().to_owned();
-    setup_logger(std::io::stdout()).expect("failled to initialize the logger");
-    let config = Arc::new(RwLock::new(OPAConfig::new(&path_env).await));
-    tokio::task::spawn(init_watcher(path_dir, config.clone(), None));
-    Lazy::force(&utils::telemetry::METER);
-
-    let rocket_handle = tokio::spawn(setup_rocket(config).launch());
-    let _rocket_res = rocket_handle.await?;
-
+    debug!("launching from {:?}", std::env::current_exe());
+    let config = OPAConfig::new(&config_path).await;
+    let service = config.service.clone();
+    let shared_state = Arc::new(RwLock::new(config));
+    tokio::spawn(init_watcher(config_path, shared_state.clone(), None));
+    let (trigger, shutdown) = Tripwire::new();
+    let signal = shutdown_signal_trigger(trigger);
+    info!("statrting http router");
+    let http_addr = service.addr.clone() + ":" + &service.ports.main as &str;
+    let http = make_http(shared_state.clone(), app, http_addr, signal);
+    let signal = shutdown_signal(shutdown);
+    let health_addr = service.addr.clone() + ":" + &service.ports.health as &str;
+    let health = make_http(shared_state.clone(), health, health_addr, signal);
+    let (http_critical, health_critical) = tokio::try_join!(http, health)?;
+    http_critical?;
+    health_critical?;
     Ok(())
 }
