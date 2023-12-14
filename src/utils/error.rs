@@ -20,11 +20,19 @@ pub trait SendError: std::error::Error + Sync {
     async fn send_error(&self, config: Arc<RwLock<OPAConfig>>) {
         let read_config = config.read().await;
         let config = &read_config.kafka;
+        let topic = match config.topics.get("error") {
+            Some(topic) => topic,
+            None => {
+                error!("the topic was not found.");
+                return;
+            }
+        };
+
         let error = ErrorData {
             code: "opa_error",
             message: self.to_string(),
         };
-        if let Err(e) = send_to_kafka(config, "error", &error).await {
+        if let Err(e) = send_to_kafka(config, topic, &error).await {
             error!("failed to send error data to kafka: {e}")
         }
     }
