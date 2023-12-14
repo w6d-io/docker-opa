@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
         _ => logger.init(),
     }
 
-    let config_path = std::env::var("CONFIG").unwrap_or_else(|_| {
+    let config_path = std::env::var("CONFIG_OPA").unwrap_or_else(|_| {
         warn!("Config variable not found switching to fallback");
         CONFIG_FALLBACK.to_owned()
     });
