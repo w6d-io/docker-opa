@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
+use axum::{extract::State, Extension, Json};
 use serde::Deserialize;
 use serde_json::value::RawValue;
-use axum::{extract::State, Extension, Json};
+use tokio::sync::RwLock;
 use tower_http::request_id::RequestId;
 
 use crate::{
-    config::OPAConfig, controller::evaluate,
+    config::OPAConfig,
+    controller::evaluate,
     error::RouterError,
-    // utils::telemetry::gather_telemetry,
+    utils::error::SendError, // utils::telemetry::gather_telemetry,
 };
-
 
 #[derive(Debug, Deserialize)]
 pub struct PayloadGuard {
-     input: Box<RawValue>,
-     data: Box<RawValue>,
+    input: Box<RawValue>,
+    data: Box<RawValue>,
 }
 
 ///this route Deserialize the data and evalute de data agaisnt the rego
@@ -27,9 +27,14 @@ pub async fn eval_rego(
     State(config): State<Arc<RwLock<OPAConfig>>>,
     Json(data): Json<PayloadGuard>,
 ) -> Result<String, RouterError> {
-    let eval = evaluate(data.input, data.data, config).await?;
-    let resp = serde_json::to_string(&eval)?;
-    Ok(resp)
+    let eval = match evaluate(data.input, data.data, config.clone()).await {
+        Ok(ev) => ev,
+        Err(e) => {
+            e.send_error(config).await;
+            return Err(e);
+        }
+    };
+    Ok(eval)
 }
 
 /* ///route for prometheus telemetry

@@ -1,7 +1,10 @@
 use std::{future::Future, sync::Arc};
 
 use anyhow::Result;
-use axum::{routing::{post, get}, Router, Server};
+use axum::{
+    routing::{get, post},
+    Router, Server,
+};
 
 use stream_cancel::Tripwire;
 use tokio::{sync::RwLock, task::JoinHandle};
@@ -14,11 +17,12 @@ use rs_utils::config::{init_watcher, Config};
 mod handler;
 use handler::{fallback, shutdown_signal, shutdown_signal_trigger};
 mod router;
-use router::{alive, ready, eval_rego};
-mod controller;
+use router::{alive, eval_rego, ready};
 mod config;
+mod controller;
 use config::{OPAConfig, CONFIG_FALLBACK};
 mod error;
+mod utils;
 
 /// ## OPA
 /// OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory and integrates opa wasm.

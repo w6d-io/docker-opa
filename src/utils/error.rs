@@ -1,7 +1,11 @@
-use anyhow::Result;
-use serde::Serialize;
+use std::sync::Arc;
 
-use crate::{config::Kafka, utils::kafka::send_to_kafka};
+use axum::async_trait;
+use serde::Serialize;
+use tokio::sync::RwLock;
+use tracing::error;
+
+use crate::{config::OPAConfig, utils::kafka::send_to_kafka};
 
 #[derive(Serialize)]
 pub struct ErrorData<'a> {
@@ -9,15 +13,22 @@ pub struct ErrorData<'a> {
     message: String,
 }
 
-///send error to the given kafka topic
-#[cfg(not(tarpaulin_include))]
-pub async fn send_error<T>(config: &Kafka, topic: &str, data: T) -> Result<()>
-where
-    T: std::error::Error,
-{
-    let error = ErrorData {
-        code: "opa_internal_error",
-        message: data.to_string(),
-    };
-    send_to_kafka(config, topic, &error).await
+#[async_trait]
+pub trait SendError {
+    ///send error to the given kafka topic
+    #[cfg(not(tarpaulin_include))]
+    async fn send_error(&self, config: Arc<RwLock<OPAConfig>>)
+    where
+        Self: std::error::Error + Sync,
+    {
+        let read_config = config.read().await;
+        let config = &read_config.kafka;
+        let error = ErrorData {
+            code: "opa_error",
+            message: self.to_string(),
+        };
+        if let Err(e) = send_to_kafka(config, "error", &error).await {
+            error!("failed to send error data to kafka: {e}")
+        }
+    }
 }
