@@ -1,10 +1,10 @@
-use log::{debug, error};
+use tracing::{debug, error};
 use once_cell::sync::Lazy;
 use opentelemetry_prometheus::PrometheusExporter;
 use prometheus::{Encoder, TextEncoder};
 
 ///static containing the prometeus expoter
-pub static METER: Lazy<PrometheusExporter> = Lazy::new(init_meter);
+pub static METER: PrometheusExporter = new(init_meter);
 
 ///initialize the opentelemetry -> prometheus expoter
 fn init_meter() -> PrometheusExporter {

@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
     env::var,
-    path::{Path, PathBuf},
     fmt,
+    path::{Path, PathBuf},
 };
 
 use anyhow::{bail, Result};
+use axum::async_trait;
 use figment::{
     providers::{Format, Toml},
     Figment,
@@ -14,7 +15,6 @@ use kafka::{
     producer::{default_config, BaseProducer},
     KafkaProducer,
 };
-use axum::async_trait;
 use serde::Deserialize;
 use tracing::info;
 
@@ -33,13 +33,11 @@ pub struct Kafka {
 impl fmt::Debug for Kafka {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Kafka")
-         .field("service", &self.service)
-         .field("topics", &self.topics)
-         .finish_non_exhaustive()
+            .field("service", &self.service)
+            .field("topics", &self.topics)
+            .finish_non_exhaustive()
     }
 }
-
-
 
 impl Kafka {
     ///update the producer Producers if needed.
@@ -120,7 +118,6 @@ impl Config for OPAConfig {
 
 ///initialise opa and compile policy to wasm
 fn init_opa() -> Result<OPAPolicy> {
-
     let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     info!("Using policy from: {}!", module_path);
     let module = PathBuf::from(module_path);

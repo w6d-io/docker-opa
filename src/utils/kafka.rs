@@ -1,8 +1,8 @@
 #[allow(unused_imports)]
 use anyhow::{anyhow, bail, Result};
 
-use tracing::info;
 use serde::Serialize;
+use tracing::info;
 
 use crate::config::Kafka;
 

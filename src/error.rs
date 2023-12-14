@@ -6,6 +6,8 @@ use thiserror::Error;
 use tracing::error;
 // use vaultrs::sys::ServerStatus;
 
+use crate::utils::error::SendError;
+
 ///handler for error in the http service
 ///it convert the recevied error in a response
 #[derive(Error, Debug)]
@@ -16,9 +18,12 @@ pub enum RouterError {
     Internal(#[from] anyhow::Error),
     #[error("failled to convert to string")]
     StrConvert(#[from] ToStrError),
-    #[error("the request failed")]
-    Http(#[from] reqwest::Error),
+    #[error("should never be empty.")]
+    EmptyResponse,
 }
+
+#[cfg(not(tarpaulin_include))]
+impl SendError for RouterError {}
 
 #[cfg(not(tarpaulin_include))]
 impl IntoResponse for RouterError {
@@ -48,9 +53,9 @@ impl IntoResponse for RouterError {
                 let status_string = "INTERNAL_SERVER_ERROR";
                 (StatusCode::INTERNAL_SERVER_ERROR, status_string).into_response()
             }
-            RouterError::Http(e) => {
-                error!("http error: {:?}", e);
-                (StatusCode::SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE").into_response()
+            RouterError::EmptyResponse => {
+                error!("opa returned empty response");
+                (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR").into_response()
             }
         }
     }
