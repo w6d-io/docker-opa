@@ -5,7 +5,6 @@ use serde::Deserialize;
 use serde_json::value::RawValue;
 use tokio::sync::RwLock;
 use tower_http::request_id::RequestId;
-use tracing::debug;
 
 use crate::{
     config::OPAConfig,
@@ -28,7 +27,7 @@ pub async fn eval_rego(
     State(config): State<Arc<RwLock<OPAConfig>>>,
     Json(data): Json<PayloadGuard>,
 ) -> Result<String, RouterError> {
-    debug!("payload:{data:?}");
+    println!("payload:{data:?}");
     let eval = match evaluate(data.input, data.data, config.clone()).await {
         Ok(ev) => ev,
         Err(e) => {
