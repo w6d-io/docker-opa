@@ -8,7 +8,8 @@ use crate::config::Kafka;
 
 ///Send data to kafka.
 #[cfg(not(tarpaulin_include))]
-pub async fn send_to_kafka<T: Serialize>(_config: &Kafka, _topic: &str, data: T) -> Result<()> {
+#[allow(clippy::no_effect_underscore_binding)]
+pub fn send<T: Serialize>(_config: &Kafka, _topic: &str, data: T) -> Result<()> {
     let _message = kafka::KafkaMessage {
         headers: None,
         key: None,
@@ -33,12 +34,12 @@ mod test_kafka {
     use rs_utils::config::Config;
 
     use super::*;
-    use crate::config::OPAConfig;
+    use crate::config::Opa;
 
     #[tokio::test]
     async fn test_send_to_kafka() {
         let map = HashMap::from([("examples".to_owned(), 42)]);
-        let config = OPAConfig::new("CONFIG").await;
-        assert!(send_to_kafka(&config.kafka, "examples", &map).await.is_ok());
+        let config = Opa::new("CONFIG").await;
+        assert!(send(&config.kafka, "examples", &map).is_ok());
     }
 }

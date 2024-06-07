@@ -6,12 +6,12 @@ use thiserror::Error;
 use tracing::error;
 // use vaultrs::sys::ServerStatus;
 
-use crate::utils::error::SendError;
+use crate::utils::error::Produce;
 
 ///handler for error in the http service
 ///it convert the recevied error in a response
 #[derive(Error, Debug)]
-pub enum RouterError {
+pub enum Router {
     #[error("failed to serialize data")]
     Serialisation(#[from] serde_json::Error),
     #[error("failed to apply identity patch")]
@@ -23,13 +23,13 @@ pub enum RouterError {
 }
 
 #[cfg(not(tarpaulin_include))]
-impl SendError for RouterError {}
+impl Produce for Router {}
 
 #[cfg(not(tarpaulin_include))]
-impl IntoResponse for RouterError {
+impl IntoResponse for Router {
     fn into_response(self) -> Response {
         match self {
-            RouterError::Serialisation(e) => {
+            Router::Serialisation(e) => {
                 error!("{:?}", e);
                 #[cfg(test)]
                 let status_string = format!("INTERNAL_SERVER_ERROR {e}");
@@ -37,7 +37,7 @@ impl IntoResponse for RouterError {
                 let status_string = "INTERNAL_SERVER_ERROR";
                 (StatusCode::INTERNAL_SERVER_ERROR, status_string).into_response()
             }
-            RouterError::Internal(e) => {
+            Router::Internal(e) => {
                 error!("{:?}", e);
                 #[cfg(test)]
                 let status_string = format!("INTERNAL_SERVER_ERROR {e}");
@@ -45,7 +45,7 @@ impl IntoResponse for RouterError {
                 let status_string = "INTERNAL_SERVER_ERROR";
                 (StatusCode::INTERNAL_SERVER_ERROR, status_string).into_response()
             }
-            RouterError::StrConvert(e) => {
+            Router::StrConvert(e) => {
                 error!("{:?}, while converting str", e);
                 #[cfg(test)]
                 let status_string = format!("INTERNAL_SERVER_ERROR {e}");
@@ -53,7 +53,7 @@ impl IntoResponse for RouterError {
                 let status_string = "INTERNAL_SERVER_ERROR";
                 (StatusCode::INTERNAL_SERVER_ERROR, status_string).into_response()
             }
-            RouterError::EmptyResponse => {
+            Router::EmptyResponse => {
                 error!("opa returned empty response");
                 (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR").into_response()
             }
