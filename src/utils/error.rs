@@ -5,35 +5,31 @@ use serde::Serialize;
 use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::{config::OPAConfig, utils::kafka::send_to_kafka};
+use crate::{config::Opa, utils::kafka};
 
 #[derive(Serialize)]
-pub struct ErrorData<'a> {
+pub struct Data<'a> {
     code: &'a str,
     message: String,
 }
 
 #[async_trait]
-pub trait SendError: std::error::Error + Sync {
+pub trait Produce: std::error::Error + Sync {
     ///send error to the given kafka topic
     #[cfg(not(tarpaulin_include))]
-    async fn send_error(&self, config: Arc<RwLock<OPAConfig>>) {
+    async fn send(&self, config: Arc<RwLock<Opa>>) {
         let read_config = config.read().await;
         let config = &read_config.kafka;
-        let topic = match config.topics.get("error") {
-            Some(topic) => topic,
-            None => {
-                error!("the topic was not found.");
-                return;
-            }
+        let Some(topic) = config.topics.get("error") else {
+            error!("the topic was not found.");
+            return;
         };
-
-        let error = ErrorData {
+        let error = Data {
             code: "opa_error",
             message: self.to_string(),
         };
-        if let Err(e) = send_to_kafka(config, topic, &error).await {
-            error!("failed to send error data to kafka: {e}")
+        if let Err(e) = kafka::send(config, topic, error) {
+            error!("failed to send error data to kafka: {e}");
         }
     }
 }

@@ -3,6 +3,7 @@ use std::{
     env::var,
     fmt,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use anyhow::{bail, Result};
@@ -27,7 +28,7 @@ pub struct Kafka {
     pub service: String,
     pub topics: HashMap<String, String>,
     #[serde(skip)]
-    pub producers: Option<HashMap<String, KafkaProducer<BaseProducer>>>,
+    pub producers: Option<HashMap<String, Arc<KafkaProducer<BaseProducer>>>>,
 }
 
 impl fmt::Debug for Kafka {
@@ -47,10 +48,10 @@ impl Kafka {
             Some(ref mut prod) => prod,
             None => &mut new_producer,
         };
-        for topic in self.topics.iter() {
+        for topic in &self.topics {
             producer.insert(
                 topic.0.to_owned(),
-                KafkaProducer::new(&default_config(&self.service), topic.0)?,
+                Arc::new(KafkaProducer::new(&default_config(&self.service), topic.0)?),
             );
         }
         Ok(())
@@ -58,7 +59,7 @@ impl Kafka {
 }
 
 #[derive(Deserialize, Clone, Default, Debug)]
-pub struct OPAPolicy {
+pub struct Policy {
     pub query: String,
     pub module: PathBuf,
 }
@@ -76,21 +77,21 @@ pub struct Service {
 }
 
 #[derive(Deserialize, Default, Clone, Debug)]
-pub struct OPAConfig {
+pub struct Opa {
     pub kafka: Kafka,
     pub service: Service,
     // pub grpc: HashMap<String, String>,
     #[serde(skip)]
     pub path: Option<PathBuf>,
     #[serde(skip)]
-    pub opa_policy: Option<OPAPolicy>,
+    pub policy: Option<Policy>,
 }
 
 ///static containing the config data. It is ititialised on first read then
 ///updated each time the file is writen.
 
 #[async_trait]
-impl Config for OPAConfig {
+impl Config for Opa {
     fn set_path<T: AsRef<Path>>(&mut self, path: T) -> &mut Self {
         self.path = Some(path.as_ref().to_path_buf());
         self
@@ -107,21 +108,20 @@ impl Config for OPAConfig {
             Err(e) => bail!(e),
             _ => (),
         }
-        let mut config: OPAConfig = Figment::new().merge(Toml::file(path)).extract()?;
+        let mut config: Opa = Figment::new().merge(Toml::file(path)).extract()?;
         config.path = Some(path.to_owned());
         config.kafka.update_producer()?;
-        config.opa_policy = Some(init_opa()?);
+        config.policy = Some(init_opa());
         *self = config;
         Ok(())
     }
 }
 
 ///initialise opa and compile policy to wasm
-fn init_opa() -> Result<OPAPolicy> {
+fn init_opa() -> Policy {
     let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     info!("Using policy from: {}!", module_path);
     let module = PathBuf::from(module_path);
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
-    let opa = OPAPolicy { query, module };
-    Ok(opa)
+    Policy { query, module }
 }

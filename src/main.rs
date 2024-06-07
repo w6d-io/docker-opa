@@ -1,13 +1,16 @@
-use std::{future::Future, sync::Arc};
+use std::{
+    future::{Future, IntoFuture},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use axum::{
     routing::{get, post},
-    Router, Server,
+    serve, Router,
 };
 
 use stream_cancel::Tripwire;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tracing::{debug, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -20,7 +23,7 @@ mod router;
 use router::{alive, eval_rego, ready};
 mod config;
 mod controller;
-use config::{OPAConfig, CONFIG_FALLBACK};
+use config::{Opa, CONFIG_FALLBACK};
 mod error;
 mod utils;
 
@@ -70,7 +73,7 @@ mod utils;
 ///OPA_QUERY query in rego
 ///
 /// enjoy :)
-type ConfigState = Arc<RwLock<OPAConfig>>;
+type ConfigState = Arc<RwLock<Opa>>;
 
 ///main router config
 pub fn app(shared_state: ConfigState) -> Router {
@@ -96,24 +99,23 @@ pub fn health(shared_state: ConfigState) -> Router {
 }
 
 ///launch http router
-fn make_http<T>(
+async fn make_http<T>(
     shared_state: ConfigState,
     f: fn(ConfigState) -> Router,
     addr: String,
     signal: T,
-) -> JoinHandle<Result<(), hyper::Error>>
+) -> JoinHandle<Result<(), std::io::Error>>
 where
     T: Future<Output = ()> + std::marker::Send + 'static,
 {
     info!("listening on {}", addr);
     //todo: add path for tlscertificate
-    let handle = tokio::spawn(
-        Server::bind(&addr.parse().unwrap())
-            .serve(f(shared_state).into_make_service())
-            .with_graceful_shutdown(signal),
-    );
+    let listener = TcpListener::bind(&addr).await.unwrap();
+    let service = serve(listener, f(shared_state))
+        .with_graceful_shutdown(signal)
+        .into_future();
     info!("lauching http server on: {addr}");
-    handle
+    tokio::spawn(service)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -133,7 +135,7 @@ async fn main() -> Result<()> {
         CONFIG_FALLBACK.to_owned()
     });
     debug!("launching from {:?}", std::env::current_exe());
-    let config = OPAConfig::new(&config_path).await;
+    let config = Opa::new(&config_path).await;
     let service = config.service.clone();
     let shared_state = Arc::new(RwLock::new(config));
     tokio::spawn(init_watcher(config_path, shared_state.clone(), None));
@@ -141,10 +143,10 @@ async fn main() -> Result<()> {
     let signal = shutdown_signal_trigger(trigger);
     info!("statrting http router");
     let http_addr = service.addr.clone() + ":" + &service.ports.main as &str;
-    let http = make_http(shared_state.clone(), app, http_addr, signal);
+    let http = make_http(shared_state.clone(), app, http_addr, signal).await;
     let signal = shutdown_signal(shutdown);
     let health_addr = service.addr.clone() + ":" + &service.ports.health as &str;
-    let health = make_http(shared_state.clone(), health, health_addr, signal);
+    let health = make_http(shared_state.clone(), health, health_addr, signal).await;
     let (http_critical, health_critical) = tokio::try_join!(http, health)?;
     http_critical?;
     health_critical?;

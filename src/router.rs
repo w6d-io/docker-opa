@@ -7,10 +7,10 @@ use tokio::sync::RwLock;
 use tower_http::request_id::RequestId;
 
 use crate::{
-    config::OPAConfig,
+    config::Opa,
     controller::evaluate,
-    error::RouterError,
-    utils::error::SendError, // utils::telemetry::gather_telemetry,
+    error::Router,
+    utils::error::Produce, // utils::telemetry::gather_telemetry,
 };
 
 #[derive(Debug, Deserialize)]
@@ -24,14 +24,14 @@ pub struct PayloadGuard {
 #[axum_macros::debug_handler]
 pub async fn eval_rego(
     request_id: Extension<RequestId>,
-    State(config): State<Arc<RwLock<OPAConfig>>>,
+    State(config): State<Arc<RwLock<Opa>>>,
     Json(data): Json<PayloadGuard>,
-) -> Result<String, RouterError> {
+) -> Result<String, Router> {
     println!("payload:{data:?}");
     let eval = match evaluate(data.input, data.data, config.clone()).await {
         Ok(ev) => ev,
         Err(e) => {
-            e.send_error(config).await;
+            e.send(config).await;
             return Err(e);
         }
     };
@@ -47,13 +47,13 @@ pub async fn handle_metrics() -> String {
 ///route for prometheus telemetry
 #[tracing::instrument]
 #[axum_macros::debug_handler]
-pub async fn alive() -> Result<(), RouterError> {
+pub async fn alive() -> Result<(), Router> {
     Ok(())
 }
 
 ///route for prometheus telemetry
 #[tracing::instrument]
 #[axum_macros::debug_handler]
-pub async fn ready() -> Result<(), RouterError> {
+pub async fn ready() -> Result<(), Router> {
     Ok(())
 }
