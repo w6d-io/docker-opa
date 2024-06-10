@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use regorus::Engine;
 use serde_json::value::RawValue;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{info, debug};
 
 use crate::{config::Opa, error::Router};
 
@@ -27,12 +27,15 @@ pub async fn evaluate(
     let data = regorus::Value::from_json_str(data.get())?;
     let input = regorus::Value::from_json_str(input.get())?;
     let mut rego = Engine::new();
+    rego.set_enable_coverage(true);
     rego.set_input(input);
     rego.add_data(data)?;
     rego.add_policy_from_file(&policies.module)?;
     let tracing = true;
     let opa_results = rego.eval_query(policies.query.clone(), tracing)?;
     println!("result: {:?}", opa_results.result);
+    let report = rego.get_coverage_report()?.to_string_pretty();
+    debug!("coverage report: {report:?}");
     let opa_result = opa_results
         .result
         .first()
