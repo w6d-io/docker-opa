@@ -30,7 +30,7 @@ pub async fn evaluate(
     rego.set_input(input);
     rego.add_data(data)?;
     rego.add_policy_from_file(&policies.module)?;
-    let tracing = cfg!(debug_assertions);
+    let tracing = true;
     let opa_results = rego.eval_query(policies.query.clone(), tracing)?;
     println!("result: {:?}", opa_results.result);
     let opa_result = opa_results
