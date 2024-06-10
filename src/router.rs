@@ -27,7 +27,6 @@ pub async fn eval_rego(
     State(config): State<Arc<RwLock<Opa>>>,
     Json(data): Json<PayloadGuard>,
 ) -> Result<String, Router> {
-    println!("payload:{data:?}");
     let eval = match evaluate(data.input, data.data, config.clone()).await {
         Ok(ev) => ev,
         Err(e) => {
