@@ -17,7 +17,7 @@ use kafka::{
     KafkaProducer,
 };
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, error};
 
 use rs_utils::config::Config;
 
@@ -111,17 +111,21 @@ impl Config for Opa {
         let mut config: Opa = Figment::new().merge(Toml::file(path)).extract()?;
         config.path = Some(path.to_owned());
         config.kafka.update_producer()?;
-        config.policy = Some(init_opa());
+        config.policy = Some(init_opa()?);
         *self = config;
         Ok(())
     }
 }
 
 ///initialise opa and compile policy to wasm
-fn init_opa() -> Policy {
+fn init_opa() -> Result<Policy> {
     let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     info!("Using policy from: {}!", module_path);
     let module = PathBuf::from(module_path);
+    if module.try_exists()? {
+        error!("!the rego file do not exist!");
+        bail!("!the rego file to not exist!")
+    }
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
-    Policy { query, module }
+    Ok(Policy { query, module })
 }

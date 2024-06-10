@@ -34,8 +34,8 @@ pub async fn evaluate(
     let tracing = true;
     let opa_results = rego.eval_query(policies.query.clone(), tracing)?;
     println!("result: {:?}", opa_results.result);
-    let report = rego.get_coverage_report()?.to_string_pretty();
-    debug!("coverage report: {report:?}");
+    let report = rego.get_coverage_report()?.to_string_pretty()?;
+    debug!("{report:?}");
     let opa_result = opa_results
         .result
         .first()
