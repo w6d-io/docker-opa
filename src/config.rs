@@ -122,9 +122,8 @@ fn init_opa() -> Result<Policy> {
     let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     info!("Using policy from: {}!", module_path);
     let module = PathBuf::from(module_path);
-    if module.try_exists()? {
-        error!("!the rego file do not exist!");
-        bail!("!the rego file to not exist!")
+    if !module.try_exists()? {
+        bail!("The rego file do not exist!")
     }
     let query = var("OPA_QUERY").unwrap_or_else(|_| "data.app.rbac.main".to_owned());
     Ok(Policy { query, module })
