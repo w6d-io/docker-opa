@@ -121,7 +121,6 @@ where
 #[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    std::env::set_var("RUST_LOG", "debug");
     let logger = fmt()
         .with_target(false)
         .with_level(true)
