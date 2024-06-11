@@ -32,6 +32,7 @@ pub async fn evaluate(
     rego.add_data(data)?;
     rego.set_input(input);
     // let tracing = true;
+    info!("evaluating rule: {}", policies.query);
     let opa_results = rego.eval_rule(policies.query.clone())?;
     println!("result: {:?}", opa_results);
     let report = rego.get_coverage_report()?.to_string_pretty()?;
