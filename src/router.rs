@@ -13,6 +13,7 @@ use crate::{
     utils::error::Produce, // utils::telemetry::gather_telemetry,
 };
 
+/// Represntation of the incoming payload
 #[derive(Debug, Deserialize)]
 pub struct PayloadGuard {
     input: Box<RawValue>,
@@ -43,14 +44,14 @@ pub async fn handle_metrics() -> String {
     gather_telemetry().await
 } */
 
-///route for prometheus telemetry
+///Route for prometheus telemetry
 #[tracing::instrument]
 #[axum_macros::debug_handler]
 pub async fn alive() -> Result<(), Router> {
     Ok(())
 }
 
-///route for prometheus telemetry
+///Route for prometheus telemetry
 #[tracing::instrument]
 #[axum_macros::debug_handler]
 pub async fn ready() -> Result<(), Router> {

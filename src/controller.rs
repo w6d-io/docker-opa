@@ -8,7 +8,7 @@ use tracing::{debug, info};
 
 use crate::{config::Opa, error::Router};
 
-/// validate the input data and identity angaint the wasm policy module
+///Validate the input data and identity against the OPA policy module.
 pub async fn evaluate(
     input: Box<RawValue>,
     data: Box<RawValue>,

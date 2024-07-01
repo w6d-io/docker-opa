@@ -23,6 +23,7 @@ use rs_utils::config::Config;
 
 pub const CONFIG_FALLBACK: &str = "tests/config.toml";
 
+///Represntation of a kafka config it only contain producer
 #[derive(Deserialize, Default, Clone)]
 pub struct Kafka {
     pub service: String,
@@ -41,7 +42,7 @@ impl fmt::Debug for Kafka {
 }
 
 impl Kafka {
-    ///update the producer Producers if needed.
+    ///Update the producer if needed.
     pub fn update_producer(&mut self) -> Result<()> {
         let mut new_producer = HashMap::new();
         let producer = match self.producers {
@@ -58,24 +59,29 @@ impl Kafka {
     }
 }
 
+/// Represntation of the policy config,
+/// this contain the data for rego.
 #[derive(Deserialize, Clone, Default, Debug)]
 pub struct Policy {
     pub query: String,
     pub module: PathBuf,
 }
 
+/// Represntation of the ports utilized by the service
 #[derive(Deserialize, Clone, Default, Debug)]
 pub struct Ports {
     pub main: String,
     pub health: String,
 }
 
+/// Represntation of the service config
 #[derive(Deserialize, Clone, Default, Debug)]
 pub struct Service {
     pub addr: String,
     pub ports: Ports,
 }
 
+/// Represntation of the app config
 #[derive(Deserialize, Default, Clone, Debug)]
 pub struct Opa {
     pub kafka: Kafka,
@@ -97,7 +103,7 @@ impl Config for Opa {
         self
     }
 
-    ///update the config in the static variable
+    ///Update the config in the static variable
     async fn update(&mut self) -> Result<()> {
         let path = match self.path {
             Some(ref path) => path as &Path,
@@ -117,7 +123,7 @@ impl Config for Opa {
     }
 }
 
-///initialise opa and compile policy to wasm
+///Initialize opa
 fn init_opa() -> Result<Policy> {
     let module_path = var("OPA_POLICY").unwrap_or_else(|_| "configs/acl.rego".to_owned());
     info!("Using policy from: {}!", module_path);

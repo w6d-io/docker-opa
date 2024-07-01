@@ -7,12 +7,16 @@ use tracing::error;
 
 use crate::{config::Opa, utils::kafka};
 
+///this structure represent an error sent to kafka
 #[derive(Serialize)]
 pub struct Data<'a> {
     code: &'a str,
     message: String,
 }
 
+
+///This trait add the send method to the type implementing it,
+///allowing it to be sent to kafka
 #[async_trait]
 pub trait Produce: std::error::Error + Sync {
     ///send error to the given kafka topic
