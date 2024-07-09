@@ -1,7 +1,7 @@
 # opa
 
 ### OPA
-OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory and integrates opa wasm.
+OPA rust is an api that allows to manage authorizations. It is based on KRATOS Ory.
 
 To start the api follow the steps:
 
