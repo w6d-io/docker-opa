@@ -14,7 +14,6 @@ pub struct Data<'a> {
     message: String,
 }
 
-
 ///This trait add the send method to the type implementing it,
 ///allowing it to be sent to kafka
 #[async_trait]

@@ -18,8 +18,8 @@ pub enum Router {
     Internal(#[from] anyhow::Error),
     #[error("failled to convert to string")]
     StrConvert(#[from] ToStrError),
-    #[error("should never be empty.")]
-    EmptyResponse,
+    // #[error("should never be empty.")]
+    // EmptyResponse,
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -52,11 +52,10 @@ impl IntoResponse for Router {
                 #[cfg(not(test))]
                 let status_string = "INTERNAL_SERVER_ERROR";
                 (StatusCode::INTERNAL_SERVER_ERROR, status_string).into_response()
-            }
-            Router::EmptyResponse => {
-                error!("opa returned empty response");
-                (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR").into_response()
-            }
+            } /* Router::EmptyResponse => {
+                  error!("opa returned empty response");
+                  (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR").into_response()
+              } */
         }
     }
 }

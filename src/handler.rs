@@ -6,7 +6,7 @@ use tracing::info;
 
 #[cfg(not(tarpaulin_include))]
 ///This function hold a channel, when a shut down signal is intercepted it drop
-///this channel completing a future that trigger the graceful shutdown of the app. 
+///this channel completing a future that trigger the graceful shutdown of the app.
 pub async fn shutdown_signal_trigger(trigger: Trigger) {
     let ctrl_c = async {
         signal::ctrl_c()

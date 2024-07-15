@@ -17,7 +17,7 @@ use kafka::{
     KafkaProducer,
 };
 use serde::Deserialize;
-use tracing::{error, info};
+use tracing::info;
 
 use rs_utils::config::Config;
 
